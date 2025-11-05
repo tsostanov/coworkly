@@ -1,0 +1,106 @@
+erDiagram
+  USER_ACCOUNT ||--o{ BOOKING : "1:N"
+  USER_ACCOUNT ||--o{ MEMBERSHIP : "1:N"
+  COMPANY ||--o{ MEMBERSHIP : "1:N"
+  LOCATION ||--o{ SPACE : "1:N"
+  TARIFF_PLAN ||--o{ SPACE : "1:N"
+  TARIFF_PLAN ||--o{ PRICE_RULE : "1:N"
+  SPACE ||--o{ BOOKING : "1:N"
+  SPACE ||--o{ SPACE_EQUIPMENT : "1:N"
+  EQUIPMENT ||--o{ SPACE_EQUIPMENT : "1:N"
+  BOOKING ||--o{ BOOKING_EQUIPMENT : "1:N"
+  EQUIPMENT ||--o{ BOOKING_EQUIPMENT : "1:N"
+  BOOKING ||--|| INVOICE : "1:1"
+  INVOICE ||--o{ PAYMENT : "1:N"
+  BOOKING ||--|| ACCESS_PASS : "1:1"
+  USER_ACCOUNT ||--o{ USER_ROLE : "1:N"
+  ROLE ||--o{ USER_ROLE : "1:N"
+
+  USER_ACCOUNT {
+    int id PK
+    string email
+    string full_name
+  }
+  ROLE {
+    int id PK
+    string code
+  }
+  USER_ROLE {
+    int user_id
+    int role_id
+  }
+  COMPANY {
+    int id PK
+    string name
+  }
+  MEMBERSHIP {
+    int id PK
+    int user_id
+    int company_id
+    string role_in_company
+  }
+  LOCATION {
+    int id PK
+    string name
+    string address
+  }
+  SPACE {
+    int id PK
+    int location_id
+    string name
+    int capacity
+    string type
+    int tariff_plan_id
+  }
+  EQUIPMENT {
+    int id PK
+    string name
+  }
+  SPACE_EQUIPMENT {
+    int space_id
+    int equipment_id
+    int qty
+  }
+  TARIFF_PLAN {
+    int id PK
+    string name
+    int base_price_cph
+  }
+  PRICE_RULE {
+    int id PK
+    int tariff_plan_id
+    string rule_type
+    int percent
+  }
+  BOOKING {
+    int id PK
+    int user_id
+    int space_id
+    date starts_at
+    date ends_at
+    string status
+  }
+  BOOKING_EQUIPMENT {
+    int booking_id
+    int equipment_id
+    int qty
+  }
+  INVOICE {
+    int id PK
+    int booking_id
+    int amount_cents
+  }
+  PAYMENT {
+    int id PK
+    int invoice_id
+    string status
+    int amount_cents
+  }
+  ACCESS_PASS {
+    int booking_id PK
+    string code_hash
+    date valid_from
+    date valid_to
+    bool is_active
+  }
+    
