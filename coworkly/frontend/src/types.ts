@@ -88,3 +88,37 @@ export type WalkInBookingResponse = {
   tempPassword: string | null;
   existingUser: boolean;
 };
+
+export type ReportSummary = {
+  totalBookings: number;
+  confirmed: number;
+  pending: number;
+  canceled: number;
+  completed: number;
+  avgDurationMinutes: number;
+  totalRevenueCents: number;
+};
+
+export type ReportByType = {
+  type: SpaceType | string;
+  bookings: number;
+  durationMinutes: number;
+};
+
+export type ReportDaily = {
+  day: string; // yyyy-mm-dd
+  bookings: number;
+};
+
+export type ReportTopSpace = {
+  spaceId: number;
+  spaceName: string;
+  bookings: number;
+};
+
+export type ReportResponse = {
+  summary: ReportSummary;
+  byType: ReportByType[];
+  daily: ReportDaily[];
+  topSpaces: ReportTopSpace[];
+};

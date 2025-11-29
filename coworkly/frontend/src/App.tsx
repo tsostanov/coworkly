@@ -9,6 +9,7 @@ import {
   SpaceResponse,
   UserProfile,
   WalkInBookingResponse,
+  ReportResponse,
 } from './types';
 
 const defaultRange = () => {
@@ -71,6 +72,8 @@ function App() {
     spaceId: null,
   });
   const [walkInResult, setWalkInResult] = useState<WalkInBookingResponse | null>(null);
+  const [report, setReport] = useState<ReportResponse | null>(null);
+  const [reportLoading, setReportLoading] = useState(false);
 
   const selectedLocation = useMemo(
     () => locations.find((loc) => loc.id === selectedLocationId) ?? null,
@@ -303,6 +306,32 @@ function App() {
       showError(error);
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function fetchReport() {
+    if (!isAdmin) {
+      setStatus({ tone: 'error', text: 'Только администратор' });
+      return;
+    }
+    if (!range.from || !range.to) {
+      setStatus({ tone: 'error', text: 'Укажите даты' });
+      return;
+    }
+    try {
+      setReportLoading(true);
+      const payload = {
+        from: toIso(range.from),
+        to: toIso(range.to),
+        locationId: selectedLocationId ?? undefined,
+      };
+      const data = await api.adminReport(payload);
+      setReport(data);
+      setStatus({ tone: 'success', text: 'Отчет обновлен' });
+    } catch (error) {
+      showError(error);
+    } finally {
+      setReportLoading(false);
     }
   }
 
@@ -585,6 +614,69 @@ function App() {
                 {walkInResult.existingUser && ' · пользователь уже существовал'}
               </div>
             )}
+          </section>
+        )}
+
+        {isAdmin && (
+          <section className="section">
+            <div className="section-title">
+              <h2>Отчеты</h2>
+              <span className="hint">Брони по типам, по дням, топ пространств</span>
+            </div>
+            <div className="button-row" style={{ marginBottom: 12 }}>
+              <button onClick={fetchReport} disabled={reportLoading}>
+                Получить отчет
+              </button>
+            </div>
+            {report && (
+              <div className="grid" style={{ gap: 12 }}>
+                <div className="card">
+                  <h3 style={{ marginTop: 0 }}>Сводка</h3>
+                  <div className="stacked">
+                    <div className="chip">Всего: {report.summary.totalBookings}</div>
+                    <div className="chip accent">Подтверждено: {report.summary.confirmed}</div>
+                    <div className="chip">В ожидании: {report.summary.pending}</div>
+                    <div className="chip">Отменено: {report.summary.canceled}</div>
+                    <div className="chip">Завершено: {report.summary.completed}</div>
+                    <div className="chip">Средн. длительность: {report.summary.avgDurationMinutes.toFixed(1)} мин</div>
+                    <div className="chip">Выручка: {formatMoney(report.summary.totalRevenueCents)}</div>
+                  </div>
+                </div>
+                <div className="card">
+                  <h3 style={{ marginTop: 0 }}>По типам</h3>
+                  {report.byType.map((row) => (
+                    <div key={row.type} className="flex" style={{ justifyContent: 'space-between', marginBottom: 6 }}>
+                      <span>{row.type}</span>
+                      <span className="text-muted">
+                        {row.bookings} брони · {(row.durationMinutes / 60).toFixed(1)} ч
+                      </span>
+                    </div>
+                  ))}
+                  {report.byType.length === 0 && <div className="text-muted">Нет данных</div>}
+                </div>
+                <div className="card">
+                  <h3 style={{ marginTop: 0 }}>По дням</h3>
+                  {report.daily.map((row) => (
+                    <div key={row.day} className="flex" style={{ justifyContent: 'space-between', marginBottom: 6 }}>
+                      <span>{row.day}</span>
+                      <span className="text-muted">{row.bookings} брони</span>
+                    </div>
+                  ))}
+                  {report.daily.length === 0 && <div className="text-muted">Нет данных</div>}
+                </div>
+                <div className="card">
+                  <h3 style={{ marginTop: 0 }}>Топ пространств</h3>
+                  {report.topSpaces.map((row) => (
+                    <div key={row.spaceId} className="flex" style={{ justifyContent: 'space-between', marginBottom: 6 }}>
+                      <span>{row.spaceName}</span>
+                      <span className="text-muted">{row.bookings} брони</span>
+                    </div>
+                  ))}
+                  {report.topSpaces.length === 0 && <div className="text-muted">Нет данных</div>}
+                </div>
+              </div>
+            )}
+            {!report && !reportLoading && <div className="text-muted">Нажмите «Получить отчет»</div>}
           </section>
         )}
 

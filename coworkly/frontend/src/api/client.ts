@@ -9,6 +9,7 @@ import {
   UserProfile,
   WalkInBookingRequest,
   WalkInBookingResponse,
+  ReportResponse,
 } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? '/api';
@@ -80,4 +81,6 @@ export const api = {
   confirmBooking: (bookingId: number) => request<void>(`/bookings/${bookingId}/confirm`, 'POST'),
   adminCreateWalkIn: (payload: WalkInBookingRequest) =>
     request<WalkInBookingResponse>('/admin/walkin', 'POST', payload),
+  adminReport: (payload: { from: string; to: string; locationId?: number | null }) =>
+    request<ReportResponse>('/admin/reports', 'POST', payload),
 };
