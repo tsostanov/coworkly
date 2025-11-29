@@ -271,6 +271,7 @@ label {
 
 .status-line.success { color: var(--success); border-color: rgba(52, 211, 153, 0.35); }
 .status-line.danger { color: var(--danger); border-color: rgba(248, 113, 113, 0.35); }
+.status-line.warn { color: var(--accent-2); border-color: rgba(251, 191, 36, 0.35); }
 
 .list {
   display: grid;

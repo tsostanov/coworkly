@@ -122,3 +122,17 @@ export type ReportResponse = {
   daily: ReportDaily[];
   topSpaces: ReportTopSpace[];
 };
+
+export type Penalty = {
+  id: number;
+  userId: number;
+  type: string;
+  reason: string | null;
+  limitMinutes: number | null;
+  amountCents: number | null;
+  expiresAt: string | null;
+  createdAt: string;
+  revokedAt: string | null;
+  createdByAdminId: number | null;
+  active: boolean;
+};

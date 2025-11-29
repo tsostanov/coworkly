@@ -3,6 +3,7 @@ package ru.ifmo.coworkly.booking;
 import jakarta.transaction.Transactional;
 import java.sql.Timestamp;
 import java.time.OffsetDateTime;
+import java.time.Duration;
 import java.util.List;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementCallback;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Service;
 import ru.ifmo.coworkly.space.Space;
 import ru.ifmo.coworkly.space.SpaceType;
 import ru.ifmo.coworkly.user.UserService;
+import ru.ifmo.coworkly.penalty.PenaltyService;
 
 @Service
 @Transactional
@@ -21,13 +23,16 @@ public class BookingService {
     private final JdbcTemplate jdbcTemplate;
     private final BookingRepository bookingRepository;
     private final UserService userService;
+    private final PenaltyService penaltyService;
 
     public BookingService(JdbcTemplate jdbcTemplate,
                           BookingRepository bookingRepository,
-                          UserService userService) {
+                          UserService userService,
+                          PenaltyService penaltyService) {
         this.jdbcTemplate = jdbcTemplate;
         this.bookingRepository = bookingRepository;
         this.userService = userService;
+        this.penaltyService = penaltyService;
     }
 
     public Long createBooking(CreateBookingRequest request) {
@@ -38,6 +43,8 @@ public class BookingService {
         }
 
         userService.ensureActive(userService.getById(request.userId()));
+        Duration duration = Duration.between(startsAt, endsAt);
+        penaltyService.validateBooking(request.userId(), duration);
 
         Long bookingId = jdbcTemplate.queryForObject(
                 CREATE_BOOKING_SQL,

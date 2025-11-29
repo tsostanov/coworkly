@@ -10,6 +10,7 @@ import {
   WalkInBookingRequest,
   WalkInBookingResponse,
   ReportResponse,
+  Penalty,
 } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? '/api';
@@ -83,4 +84,23 @@ export const api = {
     request<WalkInBookingResponse>('/admin/walkin', 'POST', payload),
   adminReport: (payload: { from: string; to: string; locationId?: number | null }) =>
     request<ReportResponse>('/admin/reports', 'POST', payload),
+  adminPenalties: {
+    list: (params?: { userId?: number; activeOnly?: boolean }) => {
+      const query = new URLSearchParams();
+      if (params?.userId) query.set('userId', String(params.userId));
+      if (params?.activeOnly) query.set('activeOnly', 'true');
+      const suffix = query.toString() ? `?${query.toString()}` : '';
+      return request<Penalty[]>(`/admin/penalties${suffix}`);
+    },
+    create: (payload: {
+      userId: number;
+      type: string;
+      reason?: string;
+      limitMinutes?: number;
+      amountCents?: number;
+      expiresAt?: string;
+    }) => request<Penalty>('/admin/penalties', 'POST', payload),
+    revoke: (id: number) => request<void>(`/admin/penalties/${id}`, 'DELETE'),
+  },
+  myPenalties: () => request<Penalty[]>('/penalties/me'),
 };

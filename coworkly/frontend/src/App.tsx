@@ -10,6 +10,7 @@ import {
   UserProfile,
   WalkInBookingResponse,
   ReportResponse,
+  Penalty,
 } from './types';
 
 const defaultRange = () => {
@@ -74,6 +75,15 @@ function App() {
   const [walkInResult, setWalkInResult] = useState<WalkInBookingResponse | null>(null);
   const [report, setReport] = useState<ReportResponse | null>(null);
   const [reportLoading, setReportLoading] = useState(false);
+  const [penalties, setPenalties] = useState<Penalty[]>([]);
+  const [adminPenalties, setAdminPenalties] = useState<Penalty[]>([]);
+  const [penaltyForm, setPenaltyForm] = useState<{
+    userId: number | null;
+    type: string;
+    reason: string;
+    limitMinutes: number | '';
+    expiresAt: string;
+  }>({ userId: null, type: 'TIMEOUT', reason: '', limitMinutes: '', expiresAt: '' });
 
   const selectedLocation = useMemo(
     () => locations.find((loc) => loc.id === selectedLocationId) ?? null,
@@ -87,11 +97,18 @@ function App() {
   useEffect(() => {
     if (authUser) {
       loadLocations();
+      loadMyPenalties();
+      if (authUser.role === 'ADMIN') {
+        setPenaltyForm((prev) => ({ ...prev, userId: authUser.id }));
+        loadAdminPenalties();
+      }
     } else {
       setLocations([]);
       setSpaces([]);
       setFreeSpaces([]);
       setBookings([]);
+      setPenalties([]);
+      setAdminPenalties([]);
     }
   }, [authUser]);
 
@@ -335,11 +352,36 @@ function App() {
     }
   }
 
+  async function loadMyPenalties() {
+    if (!authUser) return;
+    try {
+      const data = await api.myPenalties();
+      setPenalties(data);
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  async function loadAdminPenalties() {
+    if (!isAdmin) return;
+    try {
+      const data = await api.adminPenalties.list({ activeOnly: true });
+      setAdminPenalties(data);
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
   function showError(error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     setStatus({ tone: 'error', text: message });
     console.error(error);
   }
+
+  const hasTimeout = penalties.some((p) => p.type === 'TIMEOUT' && p.active);
+  const maxDurationLimit = penalties
+    .filter((p) => p.type === 'MAX_DURATION_LIMIT' && p.active && p.limitMinutes)
+    .reduce((min, p) => (min === null ? p.limitMinutes! : Math.min(min, p.limitMinutes!)), null as number | null);
 
   const isAdmin = authUser?.role === 'ADMIN';
 
@@ -421,10 +463,10 @@ function App() {
         </header>
 
         <section className="section">
-          <div className="section-title">
-            <h2>Фильтры</h2>
-            <span className="hint">Локация, пользователь и окно времени</span>
-          </div>
+            <div className="section-title">
+              <h2>Фильтры</h2>
+              <span className="hint">Локация, пользователь и окно времени</span>
+            </div>
           <div className="grid" style={{ gap: 12 }}>
             <label>
               Локация
@@ -481,6 +523,20 @@ function App() {
               />
             </label>
           </div>
+
+          {(penalties.length > 0 || maxDurationLimit || hasTimeout) && (
+            <div className="status-line warn" style={{ marginTop: 12 }}>
+              {hasTimeout && <div>У вас действует тайм-аут на бронирование.</div>}
+              {maxDurationLimit && <div>Максимальная длительность брони: {maxDurationLimit} минут.</div>}
+              {penalties
+                .filter((p) => p.active)
+                .map((p) => (
+                  <div key={p.id}>
+                    {p.type}: {p.reason || 'без причины'} {p.expiresAt ? `(до ${new Date(p.expiresAt).toLocaleString()})` : ''}
+                  </div>
+                ))}
+            </div>
+          )}
         </section>
 
         <section className="section">
@@ -677,6 +733,132 @@ function App() {
               </div>
             )}
             {!report && !reportLoading && <div className="text-muted">Нажмите «Получить отчет»</div>}
+          </section>
+        )}
+
+        {isAdmin && (
+          <section className="section">
+            <div className="section-title">
+              <h2>Штрафы и ограничения</h2>
+              <span className="hint">Тайм-аут или ограничение длительности</span>
+            </div>
+            <div className="grid">
+              <label>
+                User ID
+                <input
+                  type="number"
+                  value={penaltyForm.userId ?? ''}
+                  onChange={(e) => setPenaltyForm((prev) => ({ ...prev, userId: Number(e.target.value) || null }))}
+                  placeholder="ID пользователя"
+                />
+              </label>
+              <label>
+                Тип
+                <select
+                  value={penaltyForm.type}
+                  onChange={(e) => setPenaltyForm((prev) => ({ ...prev, type: e.target.value }))}
+                >
+                  <option value="TIMEOUT">TIMEOUT</option>
+                  <option value="MAX_DURATION_LIMIT">MAX_DURATION_LIMIT</option>
+                </select>
+              </label>
+              <label>
+                Причина
+                <input
+                  type="text"
+                  value={penaltyForm.reason}
+                  onChange={(e) => setPenaltyForm((prev) => ({ ...prev, reason: e.target.value }))}
+                  placeholder="Опишите нарушение"
+                />
+              </label>
+              {penaltyForm.type === 'MAX_DURATION_LIMIT' && (
+                <label>
+                  Лимит минут
+                  <input
+                    type="number"
+                    min={1}
+                    value={penaltyForm.limitMinutes}
+                    onChange={(e) =>
+                      setPenaltyForm((prev) => ({
+                        ...prev,
+                        limitMinutes: e.target.value === '' ? '' : Number(e.target.value),
+                      }))
+                    }
+                  />
+                </label>
+              )}
+              {penaltyForm.type === 'TIMEOUT' && (
+                <label>
+                  Действует до
+                  <input
+                    type="datetime-local"
+                    value={penaltyForm.expiresAt}
+                    onChange={(e) => setPenaltyForm((prev) => ({ ...prev, expiresAt: e.target.value }))}
+                  />
+                </label>
+              )}
+            </div>
+            <div className="button-row" style={{ marginTop: 10 }}>
+              <button
+                onClick={async () => {
+                  if (!penaltyForm.userId) {
+                    setStatus({ tone: 'error', text: 'Укажите userId' });
+                    return;
+                  }
+                  try {
+                    const payload: any = {
+                      userId: penaltyForm.userId,
+                      type: penaltyForm.type,
+                      reason: penaltyForm.reason || undefined,
+                    };
+                    if (penaltyForm.type === 'MAX_DURATION_LIMIT') {
+                      payload.limitMinutes = penaltyForm.limitMinutes || undefined;
+                    }
+                    if (penaltyForm.type === 'TIMEOUT' && penaltyForm.expiresAt) {
+                      payload.expiresAt = toIso(penaltyForm.expiresAt);
+                    }
+                    await api.adminPenalties.create(payload);
+                    setStatus({ tone: 'success', text: 'Ограничение сохранено' });
+                    await loadAdminPenalties();
+                    if (penaltyForm.userId === authUser?.id) {
+                      await loadMyPenalties();
+                    }
+                  } catch (error) {
+                    showError(error);
+                  }
+                }}
+              >
+                Назначить
+              </button>
+              <button className="ghost" onClick={loadAdminPenalties}>
+                Обновить список
+              </button>
+            </div>
+            <div className="list" style={{ marginTop: 12 }}>
+              {adminPenalties.map((p) => (
+                <div key={p.id} className="booking-item">
+                  <div className="flex" style={{ justifyContent: 'space-between' }}>
+                    <div className="flex">
+                      <span className="chip">{p.type}</span>
+                      <span className="chip">User #{p.userId}</span>
+                      {p.limitMinutes && <span className="chip">Лимит {p.limitMinutes} мин</span>}
+                    </div>
+                    <div className="flex" style={{ gap: 8 }}>
+                      <span className="text-muted">
+                        {p.active ? 'Активен' : 'Не активен'} {p.expiresAt ? `до ${new Date(p.expiresAt).toLocaleString()}` : ''}
+                      </span>
+                      {p.active && (
+                        <button className="ghost" onClick={() => api.adminPenalties.revoke(p.id).then(loadAdminPenalties)}>
+                          Снять
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  {p.reason && <div className="text-muted" style={{ marginTop: 6 }}>{p.reason}</div>}
+                </div>
+              ))}
+              {adminPenalties.length === 0 && <div className="text-muted">Нет активных ограничений</div>}
+            </div>
           </section>
         )}
 
