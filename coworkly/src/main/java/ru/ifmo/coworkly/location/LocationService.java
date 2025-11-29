@@ -22,4 +22,25 @@ public class LocationService {
                 .map(location -> new LocationResponse(location.getId(), location.getName(), location.getAddress()))
                 .toList();
     }
+
+    public LocationResponse create(LocationCreateRequest request) {
+        Location location = new Location();
+        location.setName(request.name());
+        location.setAddress(request.address());
+        Location saved = locationRepository.save(location);
+        return new LocationResponse(saved.getId(), saved.getName(), saved.getAddress());
+    }
+
+    public LocationResponse update(Long id, LocationCreateRequest request) {
+        Location location = locationRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Локация не найдена"));
+        location.setName(request.name());
+        location.setAddress(request.address());
+        Location saved = locationRepository.save(location);
+        return new LocationResponse(saved.getId(), saved.getName(), saved.getAddress());
+    }
+
+    public void delete(Long id) {
+        locationRepository.deleteById(id);
+    }
 }

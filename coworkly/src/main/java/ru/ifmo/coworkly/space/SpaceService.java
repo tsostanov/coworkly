@@ -9,6 +9,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementSetter;
 import org.springframework.stereotype.Service;
 import ru.ifmo.coworkly.location.Location;
+import ru.ifmo.coworkly.location.LocationRepository;
 
 @Service
 @Transactional
@@ -18,10 +19,14 @@ public class SpaceService {
             "select * from s367550.search_free_spaces(?, ?, ?, ?)";
 
     private final SpaceRepository spaceRepository;
+    private final LocationRepository locationRepository;
     private final JdbcTemplate jdbcTemplate;
 
-    public SpaceService(SpaceRepository spaceRepository, JdbcTemplate jdbcTemplate) {
+    public SpaceService(SpaceRepository spaceRepository,
+                        LocationRepository locationRepository,
+                        JdbcTemplate jdbcTemplate) {
         this.spaceRepository = spaceRepository;
+        this.locationRepository = locationRepository;
         this.jdbcTemplate = jdbcTemplate;
     }
 
@@ -40,6 +45,43 @@ public class SpaceService {
                 .stream()
                 .map(this::mapSpace)
                 .toList();
+    }
+
+    public SpaceResponse create(SpaceCreateRequest request) {
+        Space space = new Space();
+        Location location = getLocation(request.locationId());
+        space.setLocation(location);
+        space.setName(request.name());
+        space.setCapacity(request.capacity());
+        space.setType(request.type());
+        space.setTariffPlanId(request.tariffPlanId());
+        space.setActive(request.active() != null ? request.active() : Boolean.TRUE);
+        return mapSpace(spaceRepository.save(space));
+    }
+
+    public SpaceResponse update(Long id, SpaceCreateRequest request) {
+        Space space = spaceRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Space not found"));
+        space.setLocation(getLocation(request.locationId()));
+        space.setName(request.name());
+        space.setCapacity(request.capacity());
+        space.setType(request.type());
+        space.setTariffPlanId(request.tariffPlanId());
+        if (request.active() != null) {
+            space.setActive(request.active());
+        }
+        return mapSpace(spaceRepository.save(space));
+    }
+
+    public void delete(Long id) {
+        spaceRepository.deleteById(id);
+    }
+
+    public SpaceResponse toggleActive(Long id, boolean active) {
+        Space space = spaceRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Space not found"));
+        space.setActive(active);
+        return mapSpace(spaceRepository.save(space));
     }
 
     @Transactional(Transactional.TxType.SUPPORTS)
@@ -86,6 +128,11 @@ public class SpaceService {
                 space.getTariffPlanId(),
                 space.getActive()
         );
+    }
+
+    private Location getLocation(Long locationId) {
+        return locationRepository.findById(locationId)
+                .orElseThrow(() -> new IllegalArgumentException("Location not found"));
     }
 
     private Timestamp asTimestamp(OffsetDateTime value) {

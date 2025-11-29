@@ -1,0 +1,79 @@
+import {
+  AuthResponse,
+  BookingResponse,
+  CreateBookingRequest,
+  CreateBookingResponse,
+  FreeSpaceResponse,
+  Location,
+  SpaceResponse,
+  UserProfile,
+} from '../types';
+
+const API_BASE = import.meta.env.VITE_API_BASE ?? '/api';
+let authToken: string | null = localStorage.getItem('coworkly_token');
+
+type HttpMethod = 'GET' | 'POST' | 'PUT' | 'DELETE';
+
+async function request<T>(path: string, method: HttpMethod = 'GET', body?: unknown): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  if (!res.ok) {
+    const message = await safeReadError(res);
+    throw new Error(message);
+  }
+
+  if (res.status === 204) {
+    return undefined as T;
+  }
+
+  return res.json() as Promise<T>;
+}
+
+async function safeReadError(res: Response) {
+  try {
+    const text = await res.text();
+    return text || `Request failed with status ${res.status}`;
+  } catch (e) {
+    return `Request failed with status ${res.status}`;
+  }
+}
+
+export const api = {
+  setToken: (token: string | null) => {
+    authToken = token;
+    if (token) {
+      localStorage.setItem('coworkly_token', token);
+    } else {
+      localStorage.removeItem('coworkly_token');
+    }
+  },
+  register: (payload: { email: string; password: string; fullName: string }) =>
+    request<AuthResponse>('/auth/register', 'POST', payload),
+  login: (payload: { email: string; password: string }) =>
+    request<AuthResponse>('/auth/login', 'POST', payload),
+  me: () => request<UserProfile>('/auth/me'),
+  getLocations: () => request<Location[]>('/locations'),
+  getSpaces: () => request<SpaceResponse[]>('/spaces'),
+  getSpacesByLocation: (locationId: number) => request<SpaceResponse[]>(`/spaces/location/${locationId}`),
+  getFreeSpaces: (params: { locationId: number; from: string; to: string; capacity?: number | '' }) => {
+    const query = new URLSearchParams({
+      locationId: String(params.locationId),
+      from: params.from,
+      to: params.to,
+    });
+    if (params.capacity) {
+      query.set('capacity', String(params.capacity));
+    }
+    return request<FreeSpaceResponse[]>(`/spaces/free?${query.toString()}`);
+  },
+  getBookingsForUser: (userId: number) => request<BookingResponse[]>(`/bookings/user/${userId}`),
+  createBooking: (payload: CreateBookingRequest) => request<CreateBookingResponse>('/bookings', 'POST', payload),
+  confirmBooking: (bookingId: number) => request<void>(`/bookings/${bookingId}/confirm`, 'POST'),
+};

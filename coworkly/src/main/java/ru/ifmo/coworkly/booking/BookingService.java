@@ -9,6 +9,7 @@ import org.springframework.jdbc.core.PreparedStatementCallback;
 import org.springframework.stereotype.Service;
 import ru.ifmo.coworkly.space.Space;
 import ru.ifmo.coworkly.space.SpaceType;
+import ru.ifmo.coworkly.user.UserService;
 
 @Service
 @Transactional
@@ -19,10 +20,14 @@ public class BookingService {
 
     private final JdbcTemplate jdbcTemplate;
     private final BookingRepository bookingRepository;
+    private final UserService userService;
 
-    public BookingService(JdbcTemplate jdbcTemplate, BookingRepository bookingRepository) {
+    public BookingService(JdbcTemplate jdbcTemplate,
+                          BookingRepository bookingRepository,
+                          UserService userService) {
         this.jdbcTemplate = jdbcTemplate;
         this.bookingRepository = bookingRepository;
+        this.userService = userService;
     }
 
     public Long createBooking(CreateBookingRequest request) {
@@ -31,6 +36,8 @@ public class BookingService {
         if (!endsAt.isAfter(startsAt)) {
             throw new IllegalArgumentException("endsAt must be after startsAt");
         }
+
+        userService.ensureActive(userService.getById(request.userId()));
 
         Long bookingId = jdbcTemplate.queryForObject(
                 CREATE_BOOKING_SQL,
