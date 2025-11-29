@@ -52,6 +52,9 @@ public class ApiExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiError> handleDataIntegrity(DataIntegrityViolationException ex) {
         String message = mostSpecificMessage(ex);
+        if (isEmailDuplicate(ex, message)) {
+            message = "Email уже зарегистрирован";
+        }
         log.debug("Data integrity violation: {}", message);
         return ResponseEntity.badRequest().body(new ApiError(message));
     }
@@ -84,5 +87,10 @@ public class ApiExceptionHandler {
             return root.getMessage();
         }
         return ex.getMessage();
+    }
+
+    private boolean isEmailDuplicate(DataIntegrityViolationException ex, String message) {
+        String lower = message != null ? message.toLowerCase() : "";
+        return lower.contains("app_user") && lower.contains("email") && lower.contains("duplicate");
     }
 }

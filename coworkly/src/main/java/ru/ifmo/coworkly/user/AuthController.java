@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
 import ru.ifmo.coworkly.security.UserPrincipal;
 import ru.ifmo.coworkly.user.dto.AuthResponse;
 import ru.ifmo.coworkly.user.dto.LoginRequest;
@@ -39,8 +40,11 @@ public class AuthController {
     }
 
     @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")
     public UserResponse me(Authentication authentication) {
-        UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
+        if (authentication == null || !(authentication.getPrincipal() instanceof UserPrincipal principal)) {
+            throw new org.springframework.security.access.AccessDeniedException("Unauthorized");
+        }
         var user = userService.getById(principal.id());
         return userService.toDto(user);
     }
