@@ -73,3 +73,18 @@ export type UserProfile = {
   role: string;
   status: string;
 };
+
+export type WalkInBookingRequest = {
+  email: string;
+  fullName: string;
+  spaceId: number;
+  startsAt: string;
+  endsAt: string;
+};
+
+export type WalkInBookingResponse = {
+  userId: number;
+  bookingId: number;
+  tempPassword: string | null;
+  existingUser: boolean;
+};

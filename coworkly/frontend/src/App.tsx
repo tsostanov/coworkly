@@ -8,6 +8,7 @@ import {
   Location,
   SpaceResponse,
   UserProfile,
+  WalkInBookingResponse,
 } from './types';
 
 const defaultRange = () => {
@@ -64,6 +65,12 @@ function App() {
   const [authMode, setAuthMode] = useState<AuthMode>('login');
   const [authForm, setAuthForm] = useState({ email: '', password: '', fullName: '' });
   const [authLoading, setAuthLoading] = useState(false);
+  const [walkInForm, setWalkInForm] = useState<{ email: string; fullName: string; spaceId: number | null }>({
+    email: '',
+    fullName: '',
+    spaceId: null,
+  });
+  const [walkInResult, setWalkInResult] = useState<WalkInBookingResponse | null>(null);
 
   const selectedLocation = useMemo(
     () => locations.find((loc) => loc.id === selectedLocationId) ?? null,
@@ -90,6 +97,12 @@ function App() {
       loadSpaces(selectedLocationId);
     }
   }, [selectedLocationId]);
+
+  useEffect(() => {
+    if (spaces.length > 0 && walkInForm.spaceId == null) {
+      setWalkInForm((prev) => ({ ...prev, spaceId: spaces[0].id }));
+    }
+  }, [spaces]);
 
   useEffect(() => {
     if (authUser) {
@@ -249,6 +262,42 @@ function App() {
       setBusy(true);
       await api.confirmBooking(bookingId);
       setStatus({ tone: 'success', text: `Booking #${bookingId} confirmed.` });
+      await loadBookings();
+    } catch (error) {
+      showError(error);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function createWalkIn() {
+    if (!isAdmin) {
+      setStatus({ tone: 'error', text: 'Только администратор' });
+      return;
+    }
+    if (!walkInForm.spaceId || !range.from || !range.to) {
+      setStatus({ tone: 'error', text: 'Укажите посетителя, место и время' });
+      return;
+    }
+    try {
+      setBusy(true);
+      setWalkInResult(null);
+      const payload = {
+        email: walkInForm.email.trim(),
+        fullName: walkInForm.fullName.trim(),
+        spaceId: walkInForm.spaceId,
+        startsAt: toIso(range.from),
+        endsAt: toIso(range.to),
+      };
+      const res = await api.adminCreateWalkIn(payload);
+      setWalkInResult(res);
+      setStatus({
+        tone: 'success',
+        text: `Walk-in оформлен. Booking #${res.bookingId}, user #${res.userId}${
+          res.tempPassword ? ', выдан временный пароль' : ''
+        }`,
+      });
+      setWalkInForm((prev) => ({ ...prev, email: '', fullName: '' }));
       await loadBookings();
     } catch (error) {
       showError(error);
@@ -481,6 +530,63 @@ function App() {
             )}
           </div>
         </section>
+
+        {isAdmin && (
+          <section className="section">
+            <div className="section-title">
+              <h2>Запись пришедшего без брони</h2>
+              <span className="hint">Создать пользователя (если нового нет) и бронь сразу</span>
+            </div>
+            <div className="grid">
+              <label>
+                Email посетителя
+                <input
+                  type="email"
+                  value={walkInForm.email}
+                  onChange={(e) => setWalkInForm((prev) => ({ ...prev, email: e.target.value }))}
+                  placeholder="guest@example.com"
+                />
+              </label>
+              <label>
+                Имя
+                <input
+                  type="text"
+                  value={walkInForm.fullName}
+                  onChange={(e) => setWalkInForm((prev) => ({ ...prev, fullName: e.target.value }))}
+                  placeholder="Имя Фамилия"
+                />
+              </label>
+              <label>
+                Место
+                <select
+                  value={walkInForm.spaceId ?? ''}
+                  onChange={(e) => setWalkInForm((prev) => ({ ...prev, spaceId: Number(e.target.value) }))}
+                >
+                  {spaces.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} — {s.locationName}
+                    </option>
+                  ))}
+                </select>
+                {spaces.length === 0 && <span className="hint">Нет активных пространств в выбранной локации</span>}
+              </label>
+            </div>
+            <div className="button-row" style={{ marginTop: 12 }}>
+              <button onClick={createWalkIn} disabled={busy}>
+                Оформить walk-in
+              </button>
+            </div>
+            {walkInResult && (
+              <div className="status-line success" style={{ marginTop: 12 }}>
+                Пользователь #{walkInResult.userId}, бронь #{walkInResult.bookingId}
+                {walkInResult.tempPassword && (
+                  <> · временный пароль: <strong>{walkInResult.tempPassword}</strong></>
+                )}
+                {walkInResult.existingUser && ' · пользователь уже существовал'}
+              </div>
+            )}
+          </section>
+        )}
 
         <section className="section">
           <div className="section-title">

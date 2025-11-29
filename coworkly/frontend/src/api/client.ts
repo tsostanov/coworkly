@@ -7,6 +7,8 @@ import {
   Location,
   SpaceResponse,
   UserProfile,
+  WalkInBookingRequest,
+  WalkInBookingResponse,
 } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? '/api';
@@ -76,4 +78,6 @@ export const api = {
   getBookingsForUser: (userId: number) => request<BookingResponse[]>(`/bookings/user/${userId}`),
   createBooking: (payload: CreateBookingRequest) => request<CreateBookingResponse>('/bookings', 'POST', payload),
   confirmBooking: (bookingId: number) => request<void>(`/bookings/${bookingId}/confirm`, 'POST'),
+  adminCreateWalkIn: (payload: WalkInBookingRequest) =>
+    request<WalkInBookingResponse>('/admin/walkin', 'POST', payload),
 };
