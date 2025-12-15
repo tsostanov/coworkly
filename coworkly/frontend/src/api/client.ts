@@ -103,4 +103,5 @@ export const api = {
     revoke: (id: number) => request<void>(`/admin/penalties/${id}`, 'DELETE'),
   },
   myPenalties: () => request<Penalty[]>('/penalties/me'),
+  adminGetUser: (id: number) => request<UserProfile>(`/admin/users/${id}`),
 };

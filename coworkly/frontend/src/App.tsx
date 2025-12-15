@@ -30,8 +30,8 @@ function toIso(input: string) {
 }
 
 function formatMoney(cents: number | null | undefined) {
-  if (!cents && cents !== 0) return '—';
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
+  if (!cents && cents !== 0) return '-';
+  return new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB' }).format(cents / 100);
 }
 
 function formatDateTime(iso: string) {
@@ -77,6 +77,8 @@ function App() {
   const [reportLoading, setReportLoading] = useState(false);
   const [penalties, setPenalties] = useState<Penalty[]>([]);
   const [adminPenalties, setAdminPenalties] = useState<Penalty[]>([]);
+  const [lookupId, setLookupId] = useState<number | ''>('');
+  const [lookupUser, setLookupUser] = useState<UserProfile | null>(null);
   const [penaltyForm, setPenaltyForm] = useState<{
     userId: number | null;
     type: string;
@@ -384,6 +386,21 @@ function App() {
 
   const isAdmin = authUser?.role === 'ADMIN';
 
+  async function fetchUserInfo() {
+    if (!isAdmin || lookupId === '') return;
+    try {
+      setBusy(true);
+      const user = await api.adminGetUser(Number(lookupId));
+      setLookupUser(user);
+      setStatus({ tone: 'info', text: `Пользователь #${user.id}: ${user.fullName || user.email}` });
+    } catch (error) {
+      setLookupUser(null);
+      showError(error);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="app-shell">
       <div className="app">
@@ -669,6 +686,42 @@ function App() {
                 {walkInResult.existingUser && ' · пользователь уже существовал'}
               </div>
             )}
+          </section>
+        )}
+
+        {isAdmin && (
+          <section className="section">
+            <div className="section-title">
+              <h2>Поиск пользователя</h2>
+              <span className="hint">Быстрый просмотр профиля по ID</span>
+            </div>
+            <div className="card">
+              <div className="flex" style={{ justifyContent: 'space-between', alignItems: 'flex-end', gap: 12 }}>
+                <label style={{ flex: 1 }}>
+                  ID пользователя
+                  <input
+                    type="number"
+                    min={1}
+                    value={lookupId}
+                    onChange={(e) => setLookupId(e.target.value === '' ? '' : Number(e.target.value))}
+                    placeholder="Например, 5"
+                  />
+                </label>
+                <button onClick={fetchUserInfo} disabled={busy || lookupId === ''}>
+                  Показать
+                </button>
+              </div>
+              {lookupUser && (
+                <div className="stacked" style={{ marginTop: 10 }}>
+                  <div className="chip">{lookupUser.fullName || '—'}</div>
+                  <div className="text-muted">{lookupUser.email}</div>
+                  <div className="text-muted">
+                    Роль: {lookupUser.role} · Статус: {lookupUser.status}
+                  </div>
+                  <div className="text-muted">ID #{lookupUser.id}</div>
+                </div>
+              )}
+            </div>
           </section>
         )}
 
