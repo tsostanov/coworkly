@@ -11,6 +11,8 @@ public record BookingResponse(
         SpaceType spaceType,
         Long locationId,
         String locationName,
+        String userEmail,
+        String userFullName,
         OffsetDateTime startsAt,
         OffsetDateTime endsAt,
         BookingStatus status,

@@ -4,6 +4,8 @@ public record WalkInBookingResponse(
         Long userId,
         Long bookingId,
         String tempPassword,
-        boolean existingUser
+        boolean existingUser,
+        String userEmail,
+        String userFullName
 ) {
 }

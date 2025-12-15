@@ -14,6 +14,8 @@ public record PenaltyResponse(
         OffsetDateTime createdAt,
         OffsetDateTime revokedAt,
         Long createdByAdminId,
+        String userEmail,
+        String userFullName,
         boolean active
 ) {
 }

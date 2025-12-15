@@ -95,6 +95,7 @@ public class PenaltyService {
 
     private PenaltyResponse toDto(Penalty penalty, OffsetDateTime now) {
         boolean active = penalty.getRevokedAt() == null && (penalty.getExpiresAt() == null || penalty.getExpiresAt().isAfter(now));
+        ru.ifmo.coworkly.user.User user = userService.getById(penalty.getUserId());
         return new PenaltyResponse(
                 penalty.getId(),
                 penalty.getUserId(),
@@ -106,6 +107,8 @@ public class PenaltyService {
                 penalty.getCreatedAt(),
                 penalty.getRevokedAt(),
                 penalty.getCreatedByAdminId(),
+                user.getEmail(),
+                user.getFullName(),
                 active
         );
     }

@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import ru.ifmo.coworkly.space.Space;
 import ru.ifmo.coworkly.space.SpaceType;
 import ru.ifmo.coworkly.user.UserService;
+import ru.ifmo.coworkly.user.User;
 import ru.ifmo.coworkly.penalty.PenaltyService;
 
 @Service
@@ -70,13 +71,14 @@ public class BookingService {
 
     @Transactional(Transactional.TxType.SUPPORTS)
     public List<BookingResponse> getBookingsForUser(Long userId) {
+        User user = userService.getById(userId);
         return bookingRepository.findByUserIdOrderByStartsAtAsc(userId)
                 .stream()
-                .map(this::mapBooking)
+                .map(booking -> mapBooking(booking, user))
                 .toList();
     }
 
-    private BookingResponse mapBooking(Booking booking) {
+    private BookingResponse mapBooking(Booking booking, User user) {
         Space space = booking.getSpace();
         Long spaceId = space != null ? space.getId() : null;
         String spaceName = space != null ? space.getName() : null;
@@ -96,6 +98,8 @@ public class BookingService {
                 spaceType,
                 locationId,
                 locationName,
+                user != null ? user.getEmail() : null,
+                user != null ? user.getFullName() : null,
                 booking.getStartsAt(),
                 booking.getEndsAt(),
                 booking.getStatus(),

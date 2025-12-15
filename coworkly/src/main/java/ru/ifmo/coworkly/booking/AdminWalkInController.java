@@ -43,7 +43,7 @@ public class AdminWalkInController {
         Long bookingId = bookingService.createBooking(
                 new CreateBookingRequest(user.getId(), request.spaceId(), request.startsAt(), request.endsAt())
         );
-        return new WalkInBookingResponse(user.getId(), bookingId, tempPassword, existing);
+        return new WalkInBookingResponse(user.getId(), bookingId, tempPassword, existing, user.getEmail(), user.getFullName());
     }
 
     private String generatePassword(int length) {

@@ -40,6 +40,8 @@ export type BookingResponse = {
   spaceType: SpaceType;
   locationId: number;
   locationName: string;
+  userEmail: string | null;
+  userFullName: string | null;
   startsAt: string;
   endsAt: string;
   status: BookingStatus;
@@ -87,6 +89,8 @@ export type WalkInBookingResponse = {
   bookingId: number;
   tempPassword: string | null;
   existingUser: boolean;
+  userEmail: string;
+  userFullName: string | null;
 };
 
 export type ReportSummary = {
@@ -134,5 +138,7 @@ export type Penalty = {
   createdAt: string;
   revokedAt: string | null;
   createdByAdminId: number | null;
+  userEmail: string | null;
+  userFullName: string | null;
   active: boolean;
 };

@@ -313,9 +313,8 @@ function App() {
       setWalkInResult(res);
       setStatus({
         tone: 'success',
-        text: `Walk-in оформлен. Booking #${res.bookingId}, user #${res.userId}${
-          res.tempPassword ? ', выдан временный пароль' : ''
-        }`,
+        text: `Walk-in оформлен. Booking #${res.bookingId}, user #${res.userId}${res.tempPassword ? ', выдан временный пароль' : ''
+          }`,
       });
       setWalkInForm((prev) => ({ ...prev, email: '', fullName: '' }));
       await loadBookings();
@@ -391,8 +390,8 @@ function App() {
         <header className="hero">
           <div>
             <p className="badge">Coworkly experience</p>
-            <h1>Бронируйте вдохновляющие пространства с авторизацией</h1>
-            <p>Роли админ/резидент, живые фильтры и быстрые действия по бронированиям.</p>
+            <h1>Решай нерешаемое</h1>
+            <p>Бронируй в пару кликов и закрывай задачи ещё до того, как они станут проблемой.</p>
             <div className="button-row" style={{ marginTop: 16 }}>
               <button onClick={findFreeSpaces} disabled={busy || !authUser}>Найти свободные</button>
               <button className="ghost" onClick={loadBookings} disabled={busy || !authUser}>
@@ -409,7 +408,7 @@ function App() {
           <div className="card" style={{ backdropFilter: 'blur(22px)' }}>
             <div className="section-title" style={{ marginBottom: 12 }}>
               <h2>{authMode === 'login' ? 'Войти' : 'Зарегистрироваться'}</h2>
-              <span className="hint">JWT · BCrypt · роли</span>
+              <span className="hint">JWT · BCrypt</span>
             </div>
             <div className="stacked">
               <label>
@@ -463,10 +462,10 @@ function App() {
         </header>
 
         <section className="section">
-            <div className="section-title">
-              <h2>Фильтры</h2>
-              <span className="hint">Локация, пользователь и окно времени</span>
-            </div>
+          <div className="section-title">
+            <h2>Фильтры</h2>
+            <span className="hint">Локация, пользователь и окно времени</span>
+          </div>
           <div className="grid" style={{ gap: 12 }}>
             <label>
               Локация
@@ -898,9 +897,8 @@ function App() {
 
         {status && (
           <div
-            className={`section status-line ${
-              status.tone === 'success' ? 'success' : status.tone === 'error' ? 'danger' : ''
-            }`}
+            className={`section status-line ${status.tone === 'success' ? 'success' : status.tone === 'error' ? 'danger' : ''
+              }`}
           >
             {status.text}
           </div>
