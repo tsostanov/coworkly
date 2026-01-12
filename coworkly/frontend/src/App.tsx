@@ -44,6 +44,32 @@ function formatDateTime(iso: string) {
   });
 }
 
+function formatSpaceType(type: string) {
+  switch (type) {
+    case 'OPEN_DESK':
+      return 'Открытое место';
+    case 'MEETING_ROOM':
+      return 'Переговорная';
+    default:
+      return type;
+  }
+}
+
+function formatActiveStatus(active: boolean) {
+  return active ? 'Активно' : 'Неактивно';
+}
+
+function formatUserStatus(status: string) {
+  switch (status) {
+    case 'ACTIVE':
+      return 'Активен';
+    case 'BLOCKED':
+      return 'Заблокирован';
+    default:
+      return status;
+  }
+}
+
 function bookingTone(status: BookingStatus) {
   if (status === 'CONFIRMED' || status === 'COMPLETED') return 'good';
   if (status === 'PENDING' || status === 'DRAFT') return 'warn';
@@ -425,7 +451,6 @@ function App() {
           <div className="card" style={{ backdropFilter: 'blur(22px)' }}>
             <div className="section-title" style={{ marginBottom: 12 }}>
               <h2>{authMode === 'login' ? 'Войти' : 'Зарегистрироваться'}</h2>
-              <span className="hint">JWT · BCrypt</span>
             </div>
             <div className="stacked">
               <label>
@@ -481,7 +506,6 @@ function App() {
         <section className="section">
           <div className="section-title">
             <h2>Фильтры</h2>
-            <span className="hint">Локация, пользователь и окно времени</span>
           </div>
           <div className="grid" style={{ gap: 12 }}>
             <label>
@@ -558,7 +582,6 @@ function App() {
         <section className="section">
           <div className="section-title">
             <h2>Локации</h2>
-            <span className="hint">Выберите — появятся её пространства</span>
           </div>
           <div className="grid">
             {locations.map((loc) => (
@@ -569,7 +592,7 @@ function App() {
                     <div className="text-muted">{loc.address}</div>
                   </div>
                   {selectedLocationId === loc.id ? (
-                    <span className="chip accent">Active</span>
+                    <span className="chip accent">Активно</span>
                   ) : (
                     <button className="ghost" onClick={() => setSelectedLocationId(loc.id)}>
                       Сделать активной
@@ -584,7 +607,6 @@ function App() {
         <section className="section">
           <div className="section-title">
             <h2>Пространства</h2>
-            <span className="hint">Только активные в локации</span>
           </div>
           <div className="grid">
             {spaces.map((space) => (
@@ -594,12 +616,11 @@ function App() {
                     <div style={{ fontWeight: 600 }}>{space.name}</div>
                     <div className="text-muted">{space.locationName}</div>
                   </div>
-                  <span className="chip secondary">{space.type}</span>
                 </div>
                 <div className="flex" style={{ marginTop: 10 }}>
                   <span className="chip">Capacity {space.capacity}</span>
                   <span className="chip">Tariff {space.tariffPlanId ?? '—'}</span>
-                  <span className="chip">{space.active ? 'Active' : 'Disabled'}</span>
+                  <span className="chip">{formatActiveStatus(space.active)}</span>
                 </div>
               </div>
             ))}
@@ -610,7 +631,6 @@ function App() {
         <section className="section">
           <div className="section-title">
             <h2>Свободно на выбранное окно</h2>
-            <span className="hint">Результат поиска</span>
           </div>
           <div className="grid">
             {freeSpaces.map((space) => (
@@ -716,7 +736,7 @@ function App() {
                   <div className="chip">{lookupUser.fullName || '—'}</div>
                   <div className="text-muted">{lookupUser.email}</div>
                   <div className="text-muted">
-                    Роль: {lookupUser.role} · Статус: {lookupUser.status}
+                    Роль: {lookupUser.role} · Статус: {formatUserStatus(lookupUser.status)}
                   </div>
                   <div className="text-muted">ID #{lookupUser.id}</div>
                 </div>
@@ -754,7 +774,7 @@ function App() {
                   <h3 style={{ marginTop: 0 }}>По типам</h3>
                   {report.byType.map((row) => (
                     <div key={row.type} className="flex" style={{ justifyContent: 'space-between', marginBottom: 6 }}>
-                      <span>{row.type}</span>
+                      <span>{formatSpaceType(row.type)}</span>
                       <span className="text-muted">
                         {row.bookings} брони · {(row.durationMinutes / 60).toFixed(1)} ч
                       </span>
@@ -917,7 +937,6 @@ function App() {
         <section className="section">
           <div className="section-title">
             <h2>Мои бронирования</h2>
-            <span className="hint">Для текущего пользователя (или выбранного админом)</span>
           </div>
           <div className="list">
             {bookings.map((booking) => (

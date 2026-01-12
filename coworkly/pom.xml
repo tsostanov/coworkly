@@ -84,6 +84,7 @@
       <scope>runtime</scope>
     </dependency>
 
+    <!-- tests -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-test</artifactId>
@@ -93,9 +94,46 @@
 
   <build>
     <plugins>
+      <!-- Spring Boot plugin -->
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+
+      <!-- PlantUML class diagram generator -->
+      <plugin>
+        <groupId>de.elnarion.maven</groupId>
+        <artifactId>plantuml-generator-maven-plugin</artifactId>
+        <version>3.0.1</version>
+        <executions>
+          <execution>
+            <id>gen-uml</id>
+            <phase>verify</phase>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+            <configuration>
+              <outputDirectory>${project.build.directory}/uml</outputDirectory>
+              <outputFilename>classes.puml</outputFilename>
+
+              <!-- Ограничь своим пакетом -->
+              <scanPackages>
+                <scanPackage>ru.ifmo</scanPackage>
+              </scanPackages>
+
+              <!-- без Graphviz -->
+              <useSmetana>true</useSmetana>
+
+              <!-- читабельнее -->
+              <hideFields>true</hideFields>
+              <hideMethods>true</hideMethods>
+
+              <additionalPlantUmlConfigs>
+                <additionalPlantUmlConfig>left to right direction</additionalPlantUmlConfig>
+              </additionalPlantUmlConfigs>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
