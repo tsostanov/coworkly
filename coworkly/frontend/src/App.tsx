@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from './api/client';
 import {
   AuthResponse,
@@ -48,6 +48,11 @@ function formatSpaceName(name: string) {
   return name.replace(/Open Desk/gi, 'Открытый стол').replace(/Meeting Room/gi, 'Переговорная');
 }
 
+function minutesUntil(iso: string, now: Date) {
+  const diffMs = new Date(iso).getTime() - now.getTime();
+  return Math.ceil(diffMs / 60000);
+}
+
 function formatSpaceType(type: string) {
   switch (type) {
     case 'OPEN_DESK':
@@ -91,7 +96,8 @@ function App() {
   const [capacity, setCapacity] = useState<number | ''>('');
   const [actingUserId, setActingUserId] = useState<number | null>(null);
   const [range, setRange] = useState(defaultRange);
-  const [status, setStatus] = useState<{ tone: 'success' | 'error' | 'info'; text: string } | null>(null);
+  const [status, setStatus] = useState<{ tone: 'success' | 'error' | 'info' | 'warn'; text: string } | null>(null);
+  const [now, setNow] = useState(() => new Date());
   const [busy, setBusy] = useState(false);
   const [authUser, setAuthUser] = useState<UserProfile | null>(null);
   const [authMode, setAuthMode] = useState<AuthMode>('login');
@@ -107,6 +113,7 @@ function App() {
   const [reportLoading, setReportLoading] = useState(false);
   const [penalties, setPenalties] = useState<Penalty[]>([]);
   const [adminPenalties, setAdminPenalties] = useState<Penalty[]>([]);
+  const warnedBookingIds = useRef(new Set<number>());
   const [lookupId, setLookupId] = useState<number | ''>('');
   const [lookupUser, setLookupUser] = useState<UserProfile | null>(null);
   const [penaltyForm, setPenaltyForm] = useState<{
@@ -161,6 +168,33 @@ function App() {
       setActingUserId(authUser.id);
     }
   }, [authUser]);
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    if (bookings.length === 0) {
+      warnedBookingIds.current.clear();
+      return;
+    }
+
+    const nowTime = now.getTime();
+    const warned = warnedBookingIds.current;
+
+    bookings.forEach((booking) => {
+      if (warned.has(booking.id)) return;
+      const start = new Date(booking.startsAt).getTime();
+      const end = new Date(booking.endsAt).getTime();
+      if (nowTime < start || nowTime >= end) return;
+      const minutesLeft = Math.ceil((end - nowTime) / 60000);
+      if (minutesLeft <= 10) {
+        warned.add(booking.id);
+        setStatus({ tone: 'warn', text: 'У вас осталось 10 минут до конца бронирования' });
+      }
+    });
+  }, [bookings, now]);
 
   async function bootstrapAuth() {
     try {
@@ -943,38 +977,58 @@ function App() {
             <h2>Мои бронирования</h2>
           </div>
           <div className="list">
-            {bookings.map((booking) => (
-              <div key={booking.id} className="booking-item">
-                <div className="flex" style={{ justifyContent: 'space-between' }}>
-                  <div className="flex">
-                    <span className={`tag ${bookingTone(booking.status)}`}>{booking.status}</span>
-                    <span className="chip">{formatSpaceName(booking.spaceName)}</span>
+            {bookings.map((booking) => {
+              const start = new Date(booking.startsAt).getTime();
+              const end = new Date(booking.endsAt).getTime();
+              const nowTime = now.getTime();
+              const minutesLeft = minutesUntil(booking.endsAt, now);
+              const isActive = nowTime >= start && nowTime < end;
+
+              return (
+                <div key={booking.id} className="booking-item">
+                  <div className="flex" style={{ justifyContent: 'space-between' }}>
+                    <div className="flex">
+                      <span className={`tag ${bookingTone(booking.status)}`}>{booking.status}</span>
+                      <span className="chip">{formatSpaceName(booking.spaceName)}</span>
+                    </div>
+                    <div className="flex" style={{ gap: 8 }}>
+                      <span className="chip">{formatMoney(booking.totalCents)}</span>
+                      {isAdmin && booking.status !== 'CONFIRMED' && booking.status !== 'CANCELED' && (
+                        <button className="ghost" onClick={() => confirm(booking.id)} disabled={busy}>
+                          Подтвердить
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex" style={{ gap: 8 }}>
-                    <span className="chip">{formatMoney(booking.totalCents)}</span>
-                    {isAdmin && booking.status !== 'CONFIRMED' && booking.status !== 'CANCELED' && (
-                      <button className="ghost" onClick={() => confirm(booking.id)} disabled={busy}>
-                        Подтвердить
-                      </button>
-                    )}
+                  <div className="flex" style={{ marginTop: 10, justifyContent: 'space-between' }}>
+                    <div className="text-muted">
+                      {formatDateTime(booking.startsAt)} → {formatDateTime(booking.endsAt)}
+                    </div>
+                    <div className="text-muted">#{booking.id}</div>
                   </div>
+                  {isActive && (
+                    <div className="text-muted" style={{ marginTop: 6 }}>
+                      Осталось {minutesLeft} мин.
+                    </div>
+                  )}
                 </div>
-                <div className="flex" style={{ marginTop: 10, justifyContent: 'space-between' }}>
-                  <div className="text-muted">
-                    {formatDateTime(booking.startsAt)} → {formatDateTime(booking.endsAt)}
-                  </div>
-                  <div className="text-muted">#{booking.id}</div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
             {bookings.length === 0 && <div className="text-muted">Пока нет броней</div>}
           </div>
         </section>
 
         {status && (
           <div
-            className={`section status-line ${status.tone === 'success' ? 'success' : status.tone === 'error' ? 'danger' : ''
-              }`}
+            className={`section status-line ${
+              status.tone === 'success'
+                ? 'success'
+                : status.tone === 'error'
+                  ? 'danger'
+                  : status.tone === 'warn'
+                    ? 'warn'
+                    : ''
+            }`}
           >
             {status.text}
           </div>
