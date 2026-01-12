@@ -44,6 +44,10 @@ function formatDateTime(iso: string) {
   });
 }
 
+function formatSpaceName(name: string) {
+  return name.replace(/Open Desk/gi, 'Открытый стол').replace(/Meeting Room/gi, 'Переговорная');
+}
+
 function formatSpaceType(type: string) {
   switch (type) {
     case 'OPEN_DESK':
@@ -613,13 +617,13 @@ function App() {
               <div key={space.id} className="card">
                 <div className="flex" style={{ justifyContent: 'space-between' }}>
                   <div>
-                    <div style={{ fontWeight: 600 }}>{space.name}</div>
+                    <div style={{ fontWeight: 600 }}>{formatSpaceName(space.name)}</div>
                     <div className="text-muted">{space.locationName}</div>
                   </div>
                 </div>
                 <div className="flex" style={{ marginTop: 10 }}>
-                  <span className="chip">Capacity {space.capacity}</span>
-                  <span className="chip">Tariff {space.tariffPlanId ?? '—'}</span>
+                  <span className="chip">Вместимость {space.capacity}</span>
+                  <span className="chip">Тариф {space.tariffPlanId ?? '-'}</span>
                   <span className="chip">{formatActiveStatus(space.active)}</span>
                 </div>
               </div>
@@ -637,7 +641,7 @@ function App() {
               <div key={space.spaceId} className="card">
                 <div className="flex" style={{ justifyContent: 'space-between' }}>
                   <div>
-                    <div style={{ fontWeight: 600 }}>{space.spaceName}</div>
+                    <div style={{ fontWeight: 600 }}>{formatSpaceName(space.spaceName)}</div>
                     <div className="text-muted">Вместимость {space.capacity ?? '—'}</div>
                   </div>
                   <button onClick={() => handleBook(space.spaceId)} disabled={busy || !authUser}>
@@ -685,7 +689,7 @@ function App() {
                 >
                   {spaces.map((s) => (
                     <option key={s.id} value={s.id}>
-                      {s.name} — {s.locationName}
+                      {formatSpaceName(s.name)} — {s.locationName}
                     </option>
                   ))}
                 </select>
@@ -796,7 +800,7 @@ function App() {
                   <h3 style={{ marginTop: 0 }}>Топ пространств</h3>
                   {report.topSpaces.map((row) => (
                     <div key={row.spaceId} className="flex" style={{ justifyContent: 'space-between', marginBottom: 6 }}>
-                      <span>{row.spaceName}</span>
+                      <span>{formatSpaceName(row.spaceName)}</span>
                       <span className="text-muted">{row.bookings} брони</span>
                     </div>
                   ))}
@@ -944,7 +948,7 @@ function App() {
                 <div className="flex" style={{ justifyContent: 'space-between' }}>
                   <div className="flex">
                     <span className={`tag ${bookingTone(booking.status)}`}>{booking.status}</span>
-                    <span className="chip">{booking.spaceName}</span>
+                    <span className="chip">{formatSpaceName(booking.spaceName)}</span>
                   </div>
                   <div className="flex" style={{ gap: 8 }}>
                     <span className="chip">{formatMoney(booking.totalCents)}</span>
