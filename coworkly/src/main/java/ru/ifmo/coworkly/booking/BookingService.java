@@ -20,6 +20,8 @@ public class BookingService {
 
     private static final String CREATE_BOOKING_SQL = "select s367550.api_create_booking(?, ?, ?, ?)";
     private static final String CONFIRM_BOOKING_SQL = "select s367550.api_confirm_booking(?)";
+    private static final String CANCEL_BOOKING_SQL = "select s367550.api_cancel_booking(?)";
+    private static final String FINALIZE_BOOKINGS_SQL = "select s367550.api_finalize_bookings()";
 
     private final JdbcTemplate jdbcTemplate;
     private final BookingRepository bookingRepository;
@@ -67,6 +69,31 @@ public class BookingService {
             ps.execute();
             return null;
         });
+    }
+
+    public void cancelBooking(Long bookingId, Long actorUserId, boolean isAdmin) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+
+        if (!isAdmin) {
+            if (!booking.getUserId().equals(actorUserId)) {
+                throw new org.springframework.security.access.AccessDeniedException("Cannot cancel another user's booking");
+            }
+            if (booking.getStatus() != BookingStatus.PENDING) {
+                throw new IllegalStateException("Only pending booking can be canceled");
+            }
+        }
+
+        jdbcTemplate.execute(CANCEL_BOOKING_SQL, (PreparedStatementCallback<Void>) ps -> {
+            ps.setLong(1, bookingId);
+            ps.execute();
+            return null;
+        });
+    }
+
+    public int finalizeExpiredBookings() {
+        Integer updated = jdbcTemplate.queryForObject(FINALIZE_BOOKINGS_SQL, Integer.class);
+        return updated != null ? updated : 0;
     }
 
     @Transactional(Transactional.TxType.SUPPORTS)

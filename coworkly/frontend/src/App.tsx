@@ -6,6 +6,7 @@ import {
   BookingStatus,
   FreeSpaceResponse,
   Location,
+  SpaceType,
   SpaceResponse,
   UserProfile,
   WalkInBookingResponse,
@@ -113,6 +114,13 @@ function App() {
   const [reportLoading, setReportLoading] = useState(false);
   const [penalties, setPenalties] = useState<Penalty[]>([]);
   const [adminPenalties, setAdminPenalties] = useState<Penalty[]>([]);
+  const [locationForm, setLocationForm] = useState({ name: '', address: '' });
+  const [spaceForm, setSpaceForm] = useState<{
+    name: string;
+    locationId: number | null;
+    capacity: number | '';
+    type: SpaceType;
+  }>({ name: '', locationId: null, capacity: '', type: 'OPEN_DESK' });
   const warnedBookingIds = useRef(new Set<number>());
   const [lookupId, setLookupId] = useState<number | ''>('');
   const [lookupUser, setLookupUser] = useState<UserProfile | null>(null);
@@ -162,6 +170,12 @@ function App() {
       setWalkInForm((prev) => ({ ...prev, spaceId: spaces[0].id }));
     }
   }, [spaces]);
+
+  useEffect(() => {
+    if (locations.length > 0 && spaceForm.locationId == null) {
+      setSpaceForm((prev) => ({ ...prev, locationId: locations[0].id }));
+    }
+  }, [locations, spaceForm.locationId]);
 
   useEffect(() => {
     if (authUser) {
@@ -349,6 +363,82 @@ function App() {
       await api.confirmBooking(bookingId);
       setStatus({ tone: 'success', text: `Booking #${bookingId} confirmed.` });
       await loadBookings();
+    } catch (error) {
+      showError(error);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function cancelBooking(bookingId: number) {
+    if (!authUser) {
+      setStatus({ tone: 'error', text: 'Нужна авторизация' });
+      return;
+    }
+
+    try {
+      setBusy(true);
+      await api.cancelBooking(bookingId);
+      setStatus({ tone: 'success', text: `Бронь #${bookingId} отменена.` });
+      await loadBookings();
+    } catch (error) {
+      showError(error);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function createLocation() {
+    if (!isAdmin) {
+      setStatus({ tone: 'error', text: 'Только администратор' });
+      return;
+    }
+    if (!locationForm.name.trim() || !locationForm.address.trim()) {
+      setStatus({ tone: 'error', text: 'Заполните название и адрес' });
+      return;
+    }
+
+    try {
+      setBusy(true);
+      await api.adminLocations.create({
+        name: locationForm.name.trim(),
+        address: locationForm.address.trim(),
+      });
+      setLocationForm({ name: '', address: '' });
+      setStatus({ tone: 'success', text: 'Локация создана' });
+      await loadLocations();
+    } catch (error) {
+      showError(error);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function createSpace() {
+    if (!isAdmin) {
+      setStatus({ tone: 'error', text: 'Только администратор' });
+      return;
+    }
+    if (!spaceForm.name.trim() || !spaceForm.locationId || !spaceForm.capacity) {
+      setStatus({ tone: 'error', text: 'Укажите локацию, название и вместимость' });
+      return;
+    }
+
+    try {
+      setBusy(true);
+      await api.adminSpaces.create({
+        locationId: spaceForm.locationId,
+        name: spaceForm.name.trim(),
+        capacity: Number(spaceForm.capacity),
+        type: spaceForm.type,
+      });
+      setSpaceForm((prev) => ({
+        ...prev,
+        name: '',
+        capacity: '',
+      }));
+      setStatus({ tone: 'success', text: 'Пространство создано' });
+      await loadSpaces(spaceForm.locationId);
     } catch (error) {
       showError(error);
     } finally {
@@ -665,6 +755,104 @@ function App() {
             {spaces.length === 0 && <div className="text-muted">Нет пространств для этой локации</div>}
           </div>
         </section>
+
+        {isAdmin && (
+          <section className="section">
+            <div className="section-title">
+              <h2>Управление</h2>
+              <span className="hint">Создание локаций и пространств</span>
+            </div>
+
+            <div className="card" style={{ marginBottom: 12 }}>
+              <div className="section-title" style={{ marginBottom: 8 }}>
+                <h3>Новая локация</h3>
+              </div>
+              <div className="grid" style={{ gap: 12 }}>
+                <label>
+                  Название
+                  <input
+                    type="text"
+                    value={locationForm.name}
+                    onChange={(e) => setLocationForm((prev) => ({ ...prev, name: e.target.value }))}
+                    placeholder="Центр"
+                  />
+                </label>
+                <label>
+                  Адрес
+                  <input
+                    type="text"
+                    value={locationForm.address}
+                    onChange={(e) => setLocationForm((prev) => ({ ...prev, address: e.target.value }))}
+                    placeholder="Невский 1"
+                  />
+                </label>
+              </div>
+              <div className="button-row" style={{ marginTop: 10 }}>
+                <button onClick={createLocation} disabled={busy}>
+                  Создать локацию
+                </button>
+              </div>
+            </div>
+
+            <div className="card">
+              <div className="section-title" style={{ marginBottom: 8 }}>
+                <h3>Новое пространство</h3>
+              </div>
+              <div className="grid" style={{ gap: 12 }}>
+                <label>
+                  Название
+                  <input
+                    type="text"
+                    value={spaceForm.name}
+                    onChange={(e) => setSpaceForm((prev) => ({ ...prev, name: e.target.value }))}
+                    placeholder="Открытый стол #1"
+                  />
+                </label>
+                <label>
+                  Локация
+                  <select
+                    value={spaceForm.locationId ?? ''}
+                    onChange={(e) => setSpaceForm((prev) => ({ ...prev, locationId: Number(e.target.value) || null }))}
+                  >
+                    {locations.map((loc) => (
+                      <option key={loc.id} value={loc.id}>
+                        {loc.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Тип
+                  <select
+                    value={spaceForm.type}
+                    onChange={(e) => setSpaceForm((prev) => ({ ...prev, type: e.target.value as SpaceType }))}
+                  >
+                    <option value="OPEN_DESK">Открытый стол</option>
+                    <option value="MEETING_ROOM">Переговорная</option>
+                  </select>
+                </label>
+                <label>
+                  Вместимость
+                  <input
+                    type="number"
+                    min={1}
+                    value={spaceForm.capacity}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setSpaceForm((prev) => ({ ...prev, capacity: value === '' ? '' : Number(value) }));
+                    }}
+                    placeholder="4"
+                  />
+                </label>
+              </div>
+              <div className="button-row" style={{ marginTop: 10 }}>
+                <button onClick={createSpace} disabled={busy}>
+                  Создать пространство
+                </button>
+              </div>
+            </div>
+          </section>
+        )}
 
         <section className="section">
           <div className="section-title">
@@ -983,6 +1171,7 @@ function App() {
               const nowTime = now.getTime();
               const minutesLeft = minutesUntil(booking.endsAt, now);
               const isActive = nowTime >= start && nowTime < end;
+              const canCancel = isAdmin ? booking.status !== 'CANCELED' : booking.status === 'PENDING';
 
               return (
                 <div key={booking.id} className="booking-item">
@@ -996,6 +1185,11 @@ function App() {
                       {isAdmin && booking.status !== 'CONFIRMED' && booking.status !== 'CANCELED' && (
                         <button className="ghost" onClick={() => confirm(booking.id)} disabled={busy}>
                           Подтвердить
+                        </button>
+                      )}
+                      {canCancel && (
+                        <button className="ghost" onClick={() => cancelBooking(booking.id)} disabled={busy}>
+                          Отменить
                         </button>
                       )}
                     </div>

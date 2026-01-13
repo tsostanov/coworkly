@@ -80,6 +80,22 @@ export const api = {
   getBookingsForUser: (userId: number) => request<BookingResponse[]>(`/bookings/user/${userId}`),
   createBooking: (payload: CreateBookingRequest) => request<CreateBookingResponse>('/bookings', 'POST', payload),
   confirmBooking: (bookingId: number) => request<void>(`/bookings/${bookingId}/confirm`, 'POST'),
+  cancelBooking: (bookingId: number) => request<void>(`/bookings/${bookingId}/cancel`, 'POST'),
+  adminLocations: {
+    create: (payload: { name: string; address: string }) => request<Location>('/admin/locations', 'POST', payload),
+  },
+  adminSpaces: {
+    create: (payload: {
+      locationId: number;
+      name: string;
+      capacity: number;
+      type: 'OPEN_DESK' | 'MEETING_ROOM';
+      tariffPlanId?: number;
+      active?: boolean;
+    }) => request<SpaceResponse>('/admin/spaces', 'POST', payload),
+    activate: (id: number) => request<SpaceResponse>(`/admin/spaces/${id}/activate`, 'POST'),
+    deactivate: (id: number) => request<SpaceResponse>(`/admin/spaces/${id}/deactivate`, 'POST'),
+  },
   adminCreateWalkIn: (payload: WalkInBookingRequest) =>
     request<WalkInBookingResponse>('/admin/walkin', 'POST', payload),
   adminReport: (payload: { from: string; to: string; locationId?: number | null }) =>

@@ -43,6 +43,19 @@ public class BookingController {
         bookingService.confirmBooking(id);
     }
 
+    @PostMapping("/{id}/cancel")
+    @PreAuthorize("hasAnyRole('RESIDENT','ADMIN')")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void cancelBooking(@PathVariable Long id, Authentication authentication) {
+        Object principal = authentication.getPrincipal();
+        if (principal instanceof ru.ifmo.coworkly.security.UserPrincipal userPrincipal) {
+            boolean isAdmin = userPrincipal.role().name().equals("ADMIN");
+            bookingService.cancelBooking(id, userPrincipal.id(), isAdmin);
+            return;
+        }
+        throw new AccessDeniedException("Authentication required");
+    }
+
     @GetMapping("/user/{userId}")
     @PreAuthorize("hasAnyRole('RESIDENT','ADMIN')")
     public List<BookingResponse> getUserBookings(@PathVariable Long userId,
