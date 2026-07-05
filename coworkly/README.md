@@ -1,6 +1,6 @@
 # Coworkly
 
-[![CI](https://github.com/tsostanov/coworkly/actions/workflows/ci.yml/badge.svg)](https://github.com/tsostanov/coworkly/actions/workflows/ci.yml)
+[![CI](https://github.com/tsostanov/coworkly/actions/workflows/ci.yml/badge.svg?branch=master&event=push)](https://github.com/tsostanov/coworkly/actions/workflows/ci.yml)
 
 Coworkly is a full-stack pet project for coworking space management. It includes a Spring Boot backend with REST APIs and a React + TypeScript frontend.
 
