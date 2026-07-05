@@ -1,8 +1,8 @@
 # Coworkly
 
-Coworkly — учебный full-stack проект для управления коворкинг-пространством.
+Coworkly is a full-stack учебный project for coworking space management. It includes a Spring Boot backend with REST APIs and a React + TypeScript frontend.
 
-## Технологии
+## Tech Stack
 
 ### Backend
 - Java 17
@@ -10,7 +10,7 @@ Coworkly — учебный full-stack проект для управления 
 - Spring Web / Data JPA / Validation / Security
 - Flyway
 - PostgreSQL
-- JWT (jjwt)
+- JWT (`jjwt`)
 - Maven
 
 ### Frontend
@@ -18,38 +18,38 @@ Coworkly — учебный full-stack проект для управления 
 - TypeScript
 - Vite
 
-## Структура проекта
+## Project Structure
 
 ```text
 coworkly/
-├── src/                     # backend (Spring Boot)
-├── frontend/                # frontend (React + Vite)
-├── pom.xml                  # Maven-конфигурация backend
-└── README.md
+|-- src/                     # backend (Spring Boot)
+|-- frontend/                # frontend (React + Vite)
+|-- pom.xml                  # Maven config for backend
+`-- README.md
 ```
 
-## Быстрый старт
+## Quick Start
 
-### 1) Требования
+### Requirements
 - JDK 17+
-- Maven 3.9+ (или запуск через `./mvnw`)
+- Maven 3.9+ or `./mvnw`
 - Node.js 18+
 - npm 9+
 - PostgreSQL 14+
 
-### 2) Запуск backend
+### Run backend
 
-Из корня проекта:
+From the project root:
 
 ```bash
 ./mvnw spring-boot:run
 ```
 
-По умолчанию backend стартует на `http://localhost:8080`.
+Backend starts on `http://localhost:8081` by default.
 
-### 3) Запуск frontend
+### Run frontend
 
-В отдельном терминале:
+In a separate terminal:
 
 ```bash
 cd frontend
@@ -57,36 +57,76 @@ npm install
 npm run dev
 ```
 
-По умолчанию frontend стартует на `http://localhost:5173`.
+Frontend starts on `http://localhost:5173` by default.
 
-## Сборка
+## Build
 
 ### Backend
+
 ```bash
 ./mvnw clean package
 ```
 
 ### Frontend
+
 ```bash
 cd frontend
 npm run build
 ```
 
-## Полезные команды
+## Useful Commands
 
-### Проверка TypeScript
+### TypeScript check
+
 ```bash
 cd frontend
 npm run lint
 ```
 
-### Генерация PlantUML диаграммы классов (backend)
+### Generate PlantUML class diagram
+
 ```bash
 ./mvnw verify
 ```
 
-Диаграмма будет сгенерирована в `target/uml/classes.puml`.
+The generated diagram is written to `target/uml/classes.puml`.
 
-## Примечания
-- Для production рекомендуется вынести конфигурацию БД, JWT и CORS в переменные окружения.
-- SQL-артефакты и схема БД могут находиться в соседних директориях репозитория (например, `stage2/`).
+## Testing
+
+Run the backend test suite with:
+
+```bash
+./mvnw test
+```
+
+The current backend testing strategy is split into three layers:
+
+- Unit tests for service-level business rules.
+- API tests with `MockMvc` for key REST scenarios.
+- A Spring Boot smoke test that starts the application context on a dedicated `test` profile.
+
+Covered scenarios include:
+
+- booking date validation
+- resident cancellation rules
+- default space activation
+- free-space search validation
+- successful booking creation
+- validation errors for malformed booking payloads
+- access control for resident-only actions
+- location listing for authenticated users
+
+The `test` profile uses an in-memory H2 database, so the test suite does not depend on a locally running PostgreSQL instance.
+
+Main test classes:
+
+- `src/test/java/ru/ifmo/coworkly/booking/BookingServiceTest.java`
+- `src/test/java/ru/ifmo/coworkly/space/SpaceServiceTest.java`
+- `src/test/java/ru/ifmo/coworkly/booking/BookingControllerWebMvcTest.java`
+- `src/test/java/ru/ifmo/coworkly/location/LocationControllerWebMvcTest.java`
+- `src/test/java/ru/ifmo/coworkly/CoworklyApplicationTests.java`
+
+## Notes
+
+- For production, move database, JWT, and CORS configuration to environment variables or external config.
+- SQL artifacts and database design files may also exist in adjacent repository directories such as `stage2/`.
