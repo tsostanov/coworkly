@@ -1,5 +1,8 @@
 package ru.ifmo.coworkly.penalty;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -12,6 +15,8 @@ import ru.ifmo.coworkly.security.UserPrincipal;
 @RestController
 @RequestMapping("/api/penalties")
 @PreAuthorize("hasAnyRole('RESIDENT','ADMIN')")
+@Tag(name = "Penalties", description = "Resident penalty lookup")
+@SecurityRequirement(name = "bearerAuth")
 public class UserPenaltyController {
 
     private final PenaltyService penaltyService;
@@ -21,6 +26,7 @@ public class UserPenaltyController {
     }
 
     @GetMapping("/me")
+    @Operation(summary = "Get active penalties for the current user")
     public List<PenaltyResponse> myPenalties(Authentication authentication) {
         UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
         return penaltyService.activeForUser(principal.id());

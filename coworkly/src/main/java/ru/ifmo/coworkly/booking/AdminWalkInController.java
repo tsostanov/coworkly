@@ -1,5 +1,8 @@
 package ru.ifmo.coworkly.booking;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.security.SecureRandom;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -14,6 +17,8 @@ import ru.ifmo.coworkly.user.UserService;
 @RestController
 @RequestMapping("/api/admin/walkin")
 @PreAuthorize("hasRole('ADMIN')")
+@Tag(name = "Admin Walk-in Bookings", description = "Admin-created bookings for walk-in residents")
+@SecurityRequirement(name = "bearerAuth")
 public class AdminWalkInController {
 
     private final BookingService bookingService;
@@ -27,6 +32,7 @@ public class AdminWalkInController {
     }
 
     @PostMapping
+    @Operation(summary = "Create a walk-in booking and optionally register a resident")
     public WalkInBookingResponse createWalkIn(@Valid @RequestBody WalkInBookingRequest request) {
         String normalizedEmail = request.email().toLowerCase();
         User user = userService.findByEmail(normalizedEmail)

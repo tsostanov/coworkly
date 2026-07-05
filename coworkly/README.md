@@ -1,6 +1,8 @@
 # Coworkly
 
-Coworkly is a full-stack учебный project for coworking space management. It includes a Spring Boot backend with REST APIs and a React + TypeScript frontend.
+[![CI](https://github.com/tsostanov/coworkly/actions/workflows/ci.yml/badge.svg)](https://github.com/tsostanov/coworkly/actions/workflows/ci.yml)
+
+Coworkly is a full-stack pet project for coworking space management. It includes a Spring Boot backend with REST APIs and a React + TypeScript frontend.
 
 ## Tech Stack
 
@@ -46,6 +48,13 @@ From the project root:
 ```
 
 Backend starts on `http://localhost:8081` by default.
+
+### OpenAPI and Swagger UI
+
+After the backend starts, interactive API documentation is available at:
+
+- `http://localhost:8081/swagger-ui/index.html`
+- `http://localhost:8081/v3/api-docs`
 
 ### Run frontend
 
@@ -117,6 +126,16 @@ Covered scenarios include:
 - location listing for authenticated users
 
 The `test` profile uses an in-memory H2 database, so the test suite does not depend on a locally running PostgreSQL instance.
+
+## CI
+
+GitHub Actions is configured to validate the repository on pushes to `master` and on pull requests.
+
+The workflow currently runs:
+
+- backend tests with Maven
+- frontend type checking
+- frontend production build
 
 Main test classes:
 

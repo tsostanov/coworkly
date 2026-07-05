@@ -1,5 +1,8 @@
 package ru.ifmo.coworkly.user;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -18,6 +21,7 @@ import ru.ifmo.coworkly.user.dto.UserResponse;
 
 @RestController
 @RequestMapping("/api/auth")
+@Tag(name = "Authentication", description = "Registration, login, and current user profile")
 public class AuthController {
 
     private final AuthService authService;
@@ -30,17 +34,21 @@ public class AuthController {
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Register a new resident account")
     public AuthResponse register(@Valid @RequestBody RegisterRequest request) {
         return authService.register(request);
     }
 
     @PostMapping("/login")
+    @Operation(summary = "Authenticate a user and issue a JWT token")
     public AuthResponse login(@Valid @RequestBody LoginRequest request) {
         return authService.login(request);
     }
 
     @GetMapping("/me")
     @PreAuthorize("isAuthenticated()")
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "Get the current authenticated user profile")
     public UserResponse me(Authentication authentication) {
         if (authentication == null || !(authentication.getPrincipal() instanceof UserPrincipal principal)) {
             throw new org.springframework.security.access.AccessDeniedException("Unauthorized");

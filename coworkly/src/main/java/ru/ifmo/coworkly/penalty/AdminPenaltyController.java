@@ -1,5 +1,8 @@
 package ru.ifmo.coworkly.penalty;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -19,6 +22,8 @@ import ru.ifmo.coworkly.security.UserPrincipal;
 @RestController
 @RequestMapping("/api/admin/penalties")
 @PreAuthorize("hasRole('ADMIN')")
+@Tag(name = "Admin Penalties", description = "Administrative penalty management")
+@SecurityRequirement(name = "bearerAuth")
 public class AdminPenaltyController {
 
     private final PenaltyService penaltyService;
@@ -28,18 +33,21 @@ public class AdminPenaltyController {
     }
 
     @PostMapping
+    @Operation(summary = "Create a penalty for a user")
     public PenaltyResponse create(@Valid @RequestBody PenaltyRequest request, Authentication authentication) {
         UserPrincipal admin = (UserPrincipal) authentication.getPrincipal();
         return penaltyService.create(request, admin);
     }
 
     @GetMapping
+    @Operation(summary = "List penalties with optional filters")
     public List<PenaltyResponse> list(@RequestParam(value = "userId", required = false) Long userId,
                                       @RequestParam(value = "activeOnly", defaultValue = "false") boolean activeOnly) {
         return penaltyService.list(userId, activeOnly);
     }
 
     @DeleteMapping("/{id}")
+    @Operation(summary = "Revoke a penalty")
     public void revoke(@PathVariable Long id) {
         penaltyService.revoke(id);
     }
