@@ -32,41 +32,15 @@ coworkly/
 
 ## Quick Start
 
-### Requirements
-- JDK 17+
-- Maven 3.9+ or `./mvnw`
-- Node.js 18+
-- npm 9+
-- PostgreSQL 14+
-
-### Run backend
-
-From the project root:
+Use the [repository quick start](../README.md#quick-start-from-a-clean-clone) to create an empty PostgreSQL database, apply Flyway migrations and start both applications. The Maven module is this directory; the frontend is `frontend/`.
 
 ```bash
-./mvnw spring-boot:run
+./mvnw spring-boot:run -Dspring-boot.run.profiles=demo
 ```
 
-Backend starts on `http://localhost:8081` by default.
+Windows PowerShell: `./mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=demo"`.
 
-### OpenAPI and Swagger UI
-
-After the backend starts, interactive API documentation is available at:
-
-- `http://localhost:8081/swagger-ui/index.html`
-- `http://localhost:8081/v3/api-docs`
-
-### Run frontend
-
-In a separate terminal:
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Frontend starts on `http://localhost:5173` by default.
+The optional `demo` profile creates local accounts and bookable workspaces. Follow the [resident booking / admin visit scenario](../docs/demo.md).
 
 ## Build
 
@@ -147,5 +121,5 @@ Main test classes:
 
 ## Notes
 
-- For production, move database, JWT, and CORS configuration to environment variables or external config.
+- Supply `DB_URL`, `DB_USER`, `DB_PASSWORD` and `JWT_SECRET` for your environment; local defaults are documented in the repository README.
 - SQL artifacts and database design files may also exist in adjacent repository directories such as `stage2/`.

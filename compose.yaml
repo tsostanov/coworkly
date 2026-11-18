@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: coworkly
+      POSTGRES_USER: coworkly
+      POSTGRES_PASSWORD: coworkly
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - coworkly-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U coworkly -d coworkly"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  coworkly-postgres:

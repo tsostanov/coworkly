@@ -11,6 +11,7 @@ import {
   WalkInBookingResponse,
   ReportResponse,
   Penalty,
+  VisitResponse,
 } from '../types';
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? '/api';
@@ -120,4 +121,11 @@ export const api = {
   },
   myPenalties: () => request<Penalty[]>('/penalties/me'),
   adminGetUser: (id: number) => request<UserProfile>(`/admin/users/${id}`),
+  adminVisits: {
+    active: () => request<VisitResponse[]>('/admin/visits/active'),
+    checkIn: (bookingId: number) =>
+      request<VisitResponse>(`/admin/visits/checkin?bookingId=${bookingId}`, 'POST'),
+    checkOut: (visitId: number) =>
+      request<VisitResponse>(`/admin/visits/${visitId}/checkout`, 'POST'),
+  },
 };

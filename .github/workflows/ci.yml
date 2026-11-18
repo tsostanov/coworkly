@@ -7,6 +7,46 @@ on:
   pull_request:
 
 jobs:
+  postgres-demo:
+    name: PostgreSQL Demo
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: coworkly
+          POSTGRES_USER: coworkly
+          POSTGRES_PASSWORD: coworkly
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U coworkly -d coworkly"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+      - name: Build backend
+        working-directory: coworkly
+        run: sh mvnw -B -DskipTests package
+      - name: Start with empty PostgreSQL and exercise demo
+        run: |
+          java -jar coworkly/target/coworkly-0.0.1-SNAPSHOT.jar --spring.profiles.active=demo > backend.log 2>&1 &
+          backend_pid=$!
+          trap 'kill "$backend_pid"' EXIT
+          python3 scripts/demo-smoke.py
+      - name: Upload backend log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: postgres-demo-backend
+          path: backend.log
+
   backend:
     name: Backend Tests
     runs-on: ubuntu-latest

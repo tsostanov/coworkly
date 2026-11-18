@@ -6,6 +6,10 @@ Coworkly is a full-stack pet project for coworking space management.
 
 The repository contains a Spring Boot backend, a React frontend, database artifacts, and supporting coursework files. The main runnable application lives in the nested `coworkly/` directory.
 
+![Coworkly: administrator checks in a resident](docs/images/coworkly-demo.png)
+
+**Demo:** a resident books a desk, then an administrator confirms the booking and records the visit. Follow the [3-5 minute walkthrough](docs/demo.md) (includes local demo accounts).
+
 ## What The Project Does
 
 Coworkly models a small coworking platform with:
@@ -79,41 +83,61 @@ From the current backend structure, the main API areas are:
 - `/api/admin/visits`
 - `/api/admin/reports`
 
-## Quick Start
+## Quick Start From A Clean Clone
 
-### Requirements
+Requirements: JDK 17+, Node.js 20+, npm, and PostgreSQL (or Docker Compose for the database). The Maven Wrapper is included.
 
-- JDK 17+
-- Maven 3.9+ or Maven Wrapper
-- Node.js 18+
-- npm 9+
-- PostgreSQL 14+
+```bash
+git clone https://github.com/tsostanov/coworkly.git
+cd coworkly
+docker compose up -d --wait
+```
+
+The Compose service starts PostgreSQL 16 on `localhost:5432`, database/user/password `coworkly`. It stores data in a named volume. If port 5432 is already occupied, use a separate empty database on your installed PostgreSQL instead:
+
+```bash
+# Run as a PostgreSQL administrator; enter coworkly as the new role's password.
+createuser -h localhost -U postgres --pwprompt coworkly
+createdb -h localhost -U postgres -O coworkly coworkly
+```
+
+Do not import the coursework scripts from `stage2/`: Flyway creates schema `s367550`, tables, functions and triggers automatically in the empty database. Use a new database for this quick start; existing coursework databases need a separately planned migration.
 
 ### Run backend
 
+From the cloned repository root:
+
 ```bash
 cd coworkly
-./mvnw spring-boot:run
+./mvnw spring-boot:run -Dspring-boot.run.profiles=demo
 ```
 
-By default, the backend runs on `http://localhost:8081`.
+On Windows PowerShell use `./mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=demo"`. The explicit `demo` profile adds local demo accounts, a location, workspaces and a tariff; omit it to start without fixtures. Repeated demo starts preserve data.
 
-### OpenAPI and Swagger UI
-
-After the backend starts, API documentation is available at:
-
-- `http://localhost:8081/swagger-ui/index.html`
-- `http://localhost:8081/v3/api-docs`
+Backend: `http://localhost:8081`. Swagger UI: `http://localhost:8081/swagger-ui/index.html`. OpenAPI: `http://localhost:8081/v3/api-docs`.
 
 ### Run frontend
 
+In a second terminal, from the cloned repository root:
+
 ```bash
 cd coworkly/frontend
-npm install
+npm ci
 npm run dev
 ```
 
-By default, the frontend runs on `http://localhost:5173`.
+Open `http://localhost:5173`. Vite proxies `/api` to the backend. Continue with the [resident booking / admin visit demo](docs/demo.md).
+
+### Configuration
+
+| Environment variable | Local default |
+| --- | --- |
+| `DB_URL` | `jdbc:postgresql://localhost:5432/coworkly?currentSchema=s367550` |
+| `DB_USER` | `coworkly` |
+| `DB_PASSWORD` | `coworkly` |
+| `JWT_SECRET` | bundled local demo key (Base64) |
+
+For another database or port, set these variables before starting the backend. For example, in PowerShell: `$env:DB_URL='jdbc:postgresql://localhost:55432/coworkly?currentSchema=s367550'`. The `s367550` schema name is retained for compatibility with the existing SQL API functions. Use private credentials and a separate JWT key for deployments beyond a local demo.
 
 ## Build
 
@@ -157,6 +181,15 @@ It currently checks:
 - backend tests with Maven
 - frontend type checking
 - frontend production build
+- startup on empty PostgreSQL 16 and the resident booking / admin visit smoke scenario
+
+The full demo can also be checked against a running backend with Python 3.10+ (no extra packages):
+
+```bash
+python scripts/demo-smoke.py
+```
+
+See [clean-clone verification](docs/verification.md) for the recorded local result.
 
 ## Database Artifacts
 
@@ -171,4 +204,4 @@ The `stage2/` directory contains SQL and modeling materials, including:
 ## Notes
 
 - The active application module has its own module-level README in [coworkly/README.md](./coworkly/README.md).
-- The current backend configuration in `coworkly/src/main/resources/application.properties` should be externalized before any production-like deployment.
+- Database credentials and the JWT key can be supplied through environment variables; bundled defaults and demo accounts are for local review.

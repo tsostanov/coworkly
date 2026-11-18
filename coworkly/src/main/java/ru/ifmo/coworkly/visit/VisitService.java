@@ -6,6 +6,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import ru.ifmo.coworkly.booking.Booking;
 import ru.ifmo.coworkly.booking.BookingRepository;
+import ru.ifmo.coworkly.booking.BookingStatus;
 import ru.ifmo.coworkly.visit.dto.ExtendVisitRequest;
 import ru.ifmo.coworkly.visit.dto.VisitResponse;
 
@@ -25,6 +26,9 @@ public class VisitService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new IllegalArgumentException("Бронь не найдена"));
 
+        if (booking.getStatus() != BookingStatus.CONFIRMED || !booking.getEndsAt().isAfter(OffsetDateTime.now())) {
+            throw new IllegalStateException("Для отметки прихода нужна подтверждённая, не истёкшая бронь");
+        }
         if (visitRepository.findByBookingIdAndStatus(bookingId, VisitStatus.ACTIVE).isPresent()) {
             throw new IllegalStateException("Есть активный визит по этой брони");
         }

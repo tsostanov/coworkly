@@ -60,6 +60,17 @@ export type CreateBookingResponse = {
   bookingId: number;
 };
 
+export type VisitResponse = {
+  id: number;
+  bookingId: number;
+  userId: number;
+  spaceId: number;
+  checkIn: string;
+  plannedEnd: string;
+  checkOut: string | null;
+  status: 'ACTIVE' | 'COMPLETED' | 'OVERDUE';
+};
+
 export type AuthResponse = {
   token: string;
   userId: number;

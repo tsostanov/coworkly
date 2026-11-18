@@ -12,6 +12,7 @@ import {
   WalkInBookingResponse,
   ReportResponse,
   Penalty,
+  VisitResponse,
 } from './types';
 
 const defaultRange = () => {
@@ -94,6 +95,7 @@ function App() {
   const [spaces, setSpaces] = useState<SpaceResponse[]>([]);
   const [freeSpaces, setFreeSpaces] = useState<FreeSpaceResponse[]>([]);
   const [bookings, setBookings] = useState<BookingResponse[]>([]);
+  const [activeVisits, setActiveVisits] = useState<VisitResponse[]>([]);
   const [capacity, setCapacity] = useState<number | ''>('');
   const [actingUserId, setActingUserId] = useState<number | null>(null);
   const [range, setRange] = useState(defaultRange);
@@ -148,6 +150,7 @@ function App() {
       if (authUser.role === 'ADMIN') {
         setPenaltyForm((prev) => ({ ...prev, userId: authUser.id }));
         loadAdminPenalties();
+        loadActiveVisits();
       }
     } else {
       setLocations([]);
@@ -252,6 +255,7 @@ function App() {
     setAuthUser(null);
     setActingUserId(null);
     setBookings([]);
+    setActiveVisits([]);
     setStatus({ tone: 'info', text: 'Вышли из системы' });
   }
 
@@ -363,6 +367,40 @@ function App() {
       await api.confirmBooking(bookingId);
       setStatus({ tone: 'success', text: `Booking #${bookingId} confirmed.` });
       await loadBookings();
+    } catch (error) {
+      showError(error);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function loadActiveVisits() {
+    try {
+      setActiveVisits(await api.adminVisits.active());
+    } catch (error) {
+      showError(error);
+    }
+  }
+
+  async function checkIn(bookingId: number) {
+    try {
+      setBusy(true);
+      const visit = await api.adminVisits.checkIn(bookingId);
+      await loadActiveVisits();
+      setStatus({ tone: 'success', text: `Приход отмечен: визит #${visit.id}, бронь #${bookingId}` });
+    } catch (error) {
+      showError(error);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function checkOut(visitId: number) {
+    try {
+      setBusy(true);
+      await api.adminVisits.checkOut(visitId);
+      await loadActiveVisits();
+      setStatus({ tone: 'success', text: `Визит #${visitId} завершён` });
     } catch (error) {
       showError(error);
     } finally {
@@ -630,6 +668,35 @@ function App() {
             </div>
           </div>
         </header>
+
+        {isAdmin && (
+          <section className="section">
+            <div className="section-title">
+              <h2>Активные визиты</h2>
+              <button className="ghost" onClick={loadActiveVisits} disabled={busy}>Обновить визиты</button>
+            </div>
+            <p className="hint">Выберите ID резидента в фильтрах, откройте его брони, подтвердите бронь и отметьте приход.</p>
+            <div className="list">
+              {activeVisits.map((visit) => (
+                <div className="booking-item" key={visit.id}>
+                  <div className="flex" style={{ justifyContent: 'space-between' }}>
+                    <div className="flex">
+                      <span className="tag good">{visit.status}</span>
+                      <span className="chip">Визит #{visit.id}</span>
+                      <span className="chip">Бронь #{visit.bookingId}</span>
+                      <span className="chip">Резидент #{visit.userId}</span>
+                    </div>
+                    <button className="ghost" onClick={() => checkOut(visit.id)} disabled={busy}>Отметить уход</button>
+                  </div>
+                  <div className="text-muted" style={{ marginTop: 10 }}>
+                    Приход: {formatDateTime(visit.checkIn)} · До: {formatDateTime(visit.plannedEnd)}
+                  </div>
+                </div>
+              ))}
+              {activeVisits.length === 0 && <div className="text-muted">Нет активных визитов</div>}
+            </div>
+          </section>
+        )}
 
         <section className="section">
           <div className="section-title">
@@ -1185,6 +1252,11 @@ function App() {
                       {isAdmin && booking.status !== 'CONFIRMED' && booking.status !== 'CANCELED' && (
                         <button className="ghost" onClick={() => confirm(booking.id)} disabled={busy}>
                           Подтвердить
+                        </button>
+                      )}
+                      {isAdmin && booking.status === 'CONFIRMED' && new Date(booking.endsAt) > now && (
+                        <button className="ghost" onClick={() => checkIn(booking.id)} disabled={busy || activeVisits.some((v) => v.bookingId === booking.id)}>
+                          Отметить приход
                         </button>
                       )}
                       {canCancel && (
