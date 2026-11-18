@@ -107,7 +107,7 @@ body::after {
 .app-shell {
   position: relative;
   z-index: 1;
-  overflow: hidden;
+  overflow: clip;
 }
 
 .app-shell::before,
@@ -218,6 +218,7 @@ body::after {
 }
 
 .card {
+  min-width: 0;
   padding: 16px;
   background: var(--panel-strong);
   border-radius: var(--radius);
@@ -234,6 +235,7 @@ body::after {
 
 .flex {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
 }
@@ -311,6 +313,7 @@ button:hover:not(:disabled) {
 }
 
 input, select {
+  min-width: 0;
   width: 100%;
   padding: 10px 12px;
   border-radius: 12px;
@@ -347,6 +350,41 @@ label {
 .status-line.danger { color: var(--danger); border-color: rgba(248, 113, 113, 0.35); }
 .status-line.warn { color: var(--accent-2); border-color: rgba(251, 191, 36, 0.35); }
 
+.profile-name {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.notification {
+  position: fixed;
+  z-index: 10;
+  right: 24px;
+  bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  max-width: min(520px, calc(100vw - 32px));
+  background: #0f172a;
+  box-shadow: var(--shadow);
+  overflow-wrap: anywhere;
+}
+
+.notification button {
+  flex-shrink: 0;
+  padding: 6px 11px;
+  font-size: 20px;
+}
+
+button:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+select option {
+  background: #0f172a;
+  color: var(--text);
+}
+
 .list {
   display: grid;
   gap: 10px;
@@ -381,5 +419,20 @@ label {
   .section-title {
     flex-direction: column;
     align-items: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .app { padding: 16px 12px 96px; }
+  .hero, .section { padding: 16px; }
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .notification { right: 16px; bottom: 16px; }
+  .chip, .text-muted { overflow-wrap: anywhere; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
   }
 }

@@ -44,9 +44,21 @@ async function request<T>(path: string, method: HttpMethod = 'GET', body?: unkno
 async function safeReadError(res: Response) {
   try {
     const text = await res.text();
-    return text || `Request failed with status ${res.status}`;
+    if (text) {
+      try {
+        const error: unknown = JSON.parse(text);
+        if (typeof error === 'object' && error !== null && 'message' in error && typeof error.message === 'string') {
+          return error.message;
+        }
+      } catch {
+        // Fall back to a readable message for non-JSON proxy responses.
+      }
+    }
+    if (res.status === 401) return 'Войдите в аккаунт, чтобы продолжить';
+    if (res.status === 403) return 'У вас нет доступа к этому действию';
+    return 'Не удалось выполнить запрос. Попробуйте ещё раз';
   } catch (e) {
-    return `Request failed with status ${res.status}`;
+    return 'Не удалось прочитать ответ сервера. Попробуйте ещё раз';
   }
 }
 

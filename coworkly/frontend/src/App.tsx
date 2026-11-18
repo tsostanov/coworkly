@@ -94,6 +94,7 @@ function App() {
   const [selectedLocationId, setSelectedLocationId] = useState<number | null>(null);
   const [spaces, setSpaces] = useState<SpaceResponse[]>([]);
   const [freeSpaces, setFreeSpaces] = useState<FreeSpaceResponse[]>([]);
+  const [searchCompleted, setSearchCompleted] = useState(false);
   const [bookings, setBookings] = useState<BookingResponse[]>([]);
   const [activeVisits, setActiveVisits] = useState<VisitResponse[]>([]);
   const [capacity, setCapacity] = useState<number | ''>('');
@@ -169,6 +170,11 @@ function App() {
   }, [selectedLocationId]);
 
   useEffect(() => {
+    setFreeSpaces([]);
+    setSearchCompleted(false);
+  }, [selectedLocationId, range.from, range.to, capacity, authUser]);
+
+  useEffect(() => {
     if (spaces.length > 0 && walkInForm.spaceId == null) {
       setWalkInForm((prev) => ({ ...prev, spaceId: spaces[0].id }));
     }
@@ -239,6 +245,7 @@ function App() {
         response = await api.register(payload);
       }
       api.setToken(response.token);
+      setAuthForm({ email: '', password: '', fullName: '' });
       const profile = await api.me();
       setAuthUser(profile);
       setActingUserId(profile.id);
@@ -256,6 +263,10 @@ function App() {
     setActingUserId(null);
     setBookings([]);
     setActiveVisits([]);
+    setWalkInResult(null);
+    setLookupUser(null);
+    setReport(null);
+    setAuthForm({ email: '', password: '', fullName: '' });
     setStatus({ tone: 'info', text: 'Вышли из системы' });
   }
 
@@ -296,6 +307,15 @@ function App() {
       return;
     }
 
+    if (new Date(range.to).getTime() <= new Date(range.from).getTime()) {
+      setStatus({ tone: 'error', text: 'Окончание брони должно быть позже начала' });
+      return;
+    }
+    if (capacity !== '' && (!Number.isInteger(capacity) || capacity < 1)) {
+      setStatus({ tone: 'error', text: 'Вместимость должна быть целым положительным числом' });
+      return;
+    }
+
     try {
       setBusy(true);
       const data = await api.getFreeSpaces({
@@ -305,6 +325,7 @@ function App() {
         capacity,
       });
       setFreeSpaces(data);
+      setSearchCompleted(true);
       setStatus({ tone: 'info', text: `Свободно ${data.length} мест.` });
     } catch (error) {
       showError(error);
@@ -328,6 +349,7 @@ function App() {
         endsAt: toIso(range.to),
       };
       const created = await api.createBooking(payload);
+      setFreeSpaces((prev) => prev.filter((space) => space.spaceId !== spaceId));
       setStatus({ tone: 'success', text: `Бронь #${created.bookingId} создана.` });
       await loadBookings();
     } catch (error) {
@@ -365,7 +387,7 @@ function App() {
     try {
       setBusy(true);
       await api.confirmBooking(bookingId);
-      setStatus({ tone: 'success', text: `Booking #${bookingId} confirmed.` });
+      setStatus({ tone: 'success', text: `Бронь #${bookingId} подтверждена` });
       await loadBookings();
     } catch (error) {
       showError(error);
@@ -566,7 +588,9 @@ function App() {
   }
 
   function showError(error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
+    const message = error instanceof TypeError
+      ? 'Нет связи с сервером. Проверьте подключение и попробуйте ещё раз'
+      : error instanceof Error ? error.message : 'Не удалось выполнить действие';
     setStatus({ tone: 'error', text: message });
     console.error(error);
   }
@@ -615,57 +639,73 @@ function App() {
             )}
           </div>
           <div className="card" style={{ backdropFilter: 'blur(22px)' }}>
-            <div className="section-title" style={{ marginBottom: 12 }}>
-              <h2>{authMode === 'login' ? 'Войти' : 'Зарегистрироваться'}</h2>
-            </div>
-            <div className="stacked">
-              <label>
-                Email
-                <input
-                  type="email"
-                  value={authForm.email}
-                  onChange={(e) => setAuthForm((prev) => ({ ...prev, email: e.target.value }))}
-                  placeholder="user@example.com"
-                />
-              </label>
-              {authMode === 'register' && (
-                <label>
-                  Имя
-                  <input
-                    type="text"
-                    value={authForm.fullName}
-                    onChange={(e) => setAuthForm((prev) => ({ ...prev, fullName: e.target.value }))}
-                    placeholder="Иван Петров"
-                  />
-                </label>
-              )}
-              <label>
-                Пароль
-                <input
-                  type="password"
-                  value={authForm.password}
-                  onChange={(e) => setAuthForm((prev) => ({ ...prev, password: e.target.value }))}
-                  placeholder="******"
-                />
-              </label>
-              <div className="button-row" style={{ marginTop: 8 }}>
-                <button onClick={handleAuth} disabled={authLoading}>
-                  {authMode === 'login' ? 'Войти' : 'Создать аккаунт'}
-                </button>
-                <button
-                  type="button"
-                  className="ghost"
-                  onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
-                >
-                  {authMode === 'login' ? 'Регистрация' : 'У меня уже есть аккаунт'}
-                </button>
-                {authUser && (
-                  <button type="button" className="secondary" onClick={logout}>
-                    Выйти
-                  </button>
-                )}
+            {authUser ? (
+              <div className="stacked">
+                <span className="hint">Вы вошли в Coworkly</span>
+                <h2 className="profile-name">{authUser.fullName || authUser.email}</h2>
+                <div className="text-muted">{authUser.email}</div>
+                <div className="flex">
+                  <span className="chip accent">{isAdmin ? 'Администратор' : 'Резидент'}</span>
+                  <span className="chip">ID #{authUser.id}</span>
+                </div>
+                <button type="button" className="ghost" onClick={logout}>Выйти</button>
               </div>
-            </div>
+            ) : (
+              <form onSubmit={(event) => { event.preventDefault(); handleAuth(); }}>
+                <div className="section-title" style={{ marginBottom: 12 }}>
+                  <h2>{authMode === 'login' ? 'Войти' : 'Зарегистрироваться'}</h2>
+                </div>
+                <div className="stacked">
+                  <label>
+                    Email
+                    <input
+                      type="email"
+                      autoComplete="username"
+                      required
+                      value={authForm.email}
+                      onChange={(e) => setAuthForm((prev) => ({ ...prev, email: e.target.value }))}
+                      placeholder="user@example.com"
+                    />
+                  </label>
+                  {authMode === 'register' && (
+                    <label>
+                      Имя
+                      <input
+                        type="text"
+                        autoComplete="name"
+                        required
+                        value={authForm.fullName}
+                        onChange={(e) => setAuthForm((prev) => ({ ...prev, fullName: e.target.value }))}
+                        placeholder="Иван Петров"
+                      />
+                    </label>
+                  )}
+                  <label>
+                    Пароль
+                    <input
+                      type="password"
+                      autoComplete={authMode === 'login' ? 'current-password' : 'new-password'}
+                      required
+                      value={authForm.password}
+                      onChange={(e) => setAuthForm((prev) => ({ ...prev, password: e.target.value }))}
+                      placeholder="******"
+                    />
+                  </label>
+                  <div className="button-row" style={{ marginTop: 8 }}>
+                    <button type="submit" disabled={authLoading}>
+                      {authLoading ? 'Подождите…' : authMode === 'login' ? 'Войти' : 'Создать аккаунт'}
+                    </button>
+                    <button
+                      type="button"
+                      className="ghost"
+                      onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
+                    >
+                      {authMode === 'login' ? 'Регистрация' : 'У меня уже есть аккаунт'}
+                    </button>
+                  </div>
+                </div>
+              </form>
+            )}
           </div>
         </header>
 
@@ -706,6 +746,7 @@ function App() {
             <label>
               Локация
               <select
+                disabled={busy}
                 value={selectedLocationId ?? ''}
                 onChange={(e) => setSelectedLocationId(Number(e.target.value))}
               >
@@ -732,6 +773,7 @@ function App() {
               От
               <input
                 type="datetime-local"
+                disabled={busy}
                 value={range.from}
                 onChange={(e) => setRange((prev) => ({ ...prev, from: e.target.value }))}
               />
@@ -740,6 +782,7 @@ function App() {
               До
               <input
                 type="datetime-local"
+                disabled={busy}
                 value={range.to}
                 onChange={(e) => setRange((prev) => ({ ...prev, to: e.target.value }))}
               />
@@ -749,6 +792,7 @@ function App() {
               <input
                 type="number"
                 min={1}
+                disabled={busy}
                 value={capacity}
                 onChange={(e) => {
                   const value = e.target.value;
@@ -789,7 +833,7 @@ function App() {
                   {selectedLocationId === loc.id ? (
                     <span className="chip accent">Активно</span>
                   ) : (
-                    <button className="ghost" onClick={() => setSelectedLocationId(loc.id)}>
+                    <button className="ghost" onClick={() => setSelectedLocationId(loc.id)} disabled={busy}>
                       Сделать активной
                     </button>
                   )}
@@ -940,7 +984,9 @@ function App() {
               </div>
             ))}
             {freeSpaces.length === 0 && (
-              <div className="text-muted">Нажмите «Найти свободные», чтобы увидеть результат</div>
+              <div className="text-muted">{searchCompleted
+                ? 'На выбранное время свободных мест нет. Попробуйте другой интервал или локацию'
+                : 'Выберите время и нажмите «Найти свободные»'}</div>
             )}
           </div>
         </section>
@@ -1238,7 +1284,9 @@ function App() {
               const nowTime = now.getTime();
               const minutesLeft = minutesUntil(booking.endsAt, now);
               const isActive = nowTime >= start && nowTime < end;
-              const canCancel = isAdmin ? booking.status !== 'CANCELED' : booking.status === 'PENDING';
+              const canCancel = isAdmin
+                ? ['DRAFT', 'PENDING', 'CONFIRMED'].includes(booking.status)
+                : booking.status === 'PENDING';
 
               return (
                 <div key={booking.id} className="booking-item">
@@ -1249,7 +1297,7 @@ function App() {
                     </div>
                     <div className="flex" style={{ gap: 8 }}>
                       <span className="chip">{formatMoney(booking.totalCents)}</span>
-                      {isAdmin && booking.status !== 'CONFIRMED' && booking.status !== 'CANCELED' && (
+                      {isAdmin && ['DRAFT', 'PENDING'].includes(booking.status) && (
                         <button className="ghost" onClick={() => confirm(booking.id)} disabled={busy}>
                           Подтвердить
                         </button>
@@ -1286,7 +1334,9 @@ function App() {
 
         {status && (
           <div
-            className={`section status-line ${
+            role={status.tone === 'error' ? 'alert' : 'status'}
+            aria-atomic="true"
+            className={`notification status-line ${
               status.tone === 'success'
                 ? 'success'
                 : status.tone === 'error'
@@ -1296,7 +1346,8 @@ function App() {
                     : ''
             }`}
           >
-            {status.text}
+            <span>{status.text}</span>
+            <button className="ghost" type="button" aria-label="Закрыть уведомление" onClick={() => setStatus(null)}>×</button>
           </div>
         )}
       </div>
